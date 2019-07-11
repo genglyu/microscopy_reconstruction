@@ -1,0 +1,7 @@
+# Add any directories, files, or patterns you don't want to be tracked by version control
+.idea/
+.idea_modules/
+*idea/
+*idea_modules/
+*__pycache__*
+cmake-build-*/
