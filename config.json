@@ -1,0 +1,85 @@
+{
+    "path_data": "",
+    "path_tile_info": "tileInfo/",
+    "path_image_dir": "color/",
+    "path_scene_dir": "scene/",
+
+    "path_open3d_local_transformation" : "local_transform",
+    "path_g2o_local_transformation" : "local_transform",
+
+    "local_transform_template": "local_trans_%05d_to_%05d.json",
+
+    "tile_info_dict_all_name": "tile_info_dict_all.json",
+    "tile_info_dict_name": "tile_info_dict.json",
+    "local_trans_dict_name": "local_trans_dict.json",
+
+    "rough_open3d_pg_name": "rough_open3d_pose_graph.json",
+    "optimized_open3d_pg_name": "optimized_open3d_pose_graph.json",
+
+    "rough_g2o_pg_name": "rough_g2o_pose_graph.g2o",
+    "optimized_g2o_pg_name": "optimized_g2o_pose_graph.g2o",
+
+    "index_start" : 0,
+    "index_end" : -1,
+    "subsample_per_n_frame": 1,
+    "laplacian_threshold": 1000,
+    "laplacian_relative_threshold": 0.5,
+    "odometry_range": 2,
+    "loop_closure_search_range_factor": 2,
+    "normal_direction_tolerance_by_cos": 0.98,
+    "path_camera_intrinsic": "",
+
+    "n_keyframes_per_n_frame": 5,
+    "keyframe_voxel_size": 2.0,
+    "keyframe_min_bound_T": [1.0, 1.0, 1.0],
+    "keyframe_max_bound_T": [15.0, 15.0, 15.0],
+    "size_by_mm": [
+        [5.2, 3.9],
+        [3.2, 2.4]
+    ],
+    "crop_width_by_pixel": 50,
+    "crop_height_by_pixel": 30,
+
+    "n_features": 400,
+    "cv_max_level": 3,
+    "conf_threshold": 0.3,
+    "scaling_tolerance": 0.05,
+    "rotation_tolerance": 0.1,
+    "num_matches_thresh1": 6,
+
+    "max_depth": 300.0,
+    "voxel_size": 0.008125,
+    "max_depth_diff": 0.01,
+
+    "max_correspondence_distance": 0.05,
+    "preference_loop_closure_odometry": 10,
+    "edge_prune_threshold": 0.00,
+    "visualization_voxel_size": 0.008125,
+
+    "icp_method": "color",
+    "global_registration": "ransac",
+
+    "camera_offset": [
+        0.96996688, -0.01209714, -0.02935986,  0,
+        0.01152412,  0.97022468, -0.01923989,  0,
+        0.02943545,  0.01878122,  0.97500855,  0.0,
+        0.0,         0.0,         0.0,         1.0
+    ],
+
+    "virtual_node_information": [
+        [ 100000000,         0,         0,         0,         0,         0],
+        [         0, 100000000,         0,         0,         0,         0],
+        [         0,         0, 100000000,         0,         0,         0],
+        [         0,         0,         0, 100000000,         0,         0],
+        [         0,         0,         0,         0, 100000000,         0],
+        [         0,         0,         0,         0,         0, 100000000]
+    ],
+    "virtual_edge_information": [
+        [   100000,         0,         0,         0,         0,         0],
+        [        0,    100000,         0,         0,         0,         0],
+        [        0,         0,     10000,         0,         0,         0],
+        [        0,         0,         0,      1000,         0,         0],
+        [        0,         0,         0,         0,      1000,         0],
+        [        0,         0,         0,         0,         0,      1000]
+    ]
+}

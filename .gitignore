@@ -5,3 +5,4 @@
 *idea_modules/
 *__pycache__*
 cmake-build-*/
+DebugTools/random_testing.py
