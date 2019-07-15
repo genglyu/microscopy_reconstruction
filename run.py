@@ -12,7 +12,10 @@ sys.path.append("./Tools")
 from file import *
 from copy import deepcopy
 from tile_info_processing import *
-from visualization import *
+
+import visualization
+import pose_estimation_cv
+import make_pose_graph_g2o
 
 
 if __name__ == "__main__":
@@ -109,6 +112,44 @@ if __name__ == "__main__":
     else:
         print("Wrong input for -dict.")
         sys.exit()
+
+    # Registering ================================================================================
+    if args.register == "g2o":
+        trans_data_manager = pose_estimation_cv.TransDataG2o(tile_info_dict, config)
+        try:
+            trans_data_manager.read(join(config["path_data"], config["local_trans_dict_name"]))
+        except:
+            trans_data_manager.update_local_trans_data_multiprocessing()
+            trans_data_manager.save(join(config["path_data"], config["local_trans_dict_name"]))
+    # Make pose graph ============================================================================
+    if args.make_pose_graph == "g2o":
+        pose_graph_g2o = make_pose_graph_g2o.PoseGraphOptimizerG2o()
+        pose_graph_g2o.make_pose_graph(tile_info_dict, trans_data_manager, config)
+        # tile_info_dict = pose_graph_g2o.update_tile_info_dict(tile_info_dict)
+        pose_graph_g2o.save(join(config["path_data"], config["rough_g2o_pg_name"]))
+
+    if args.optimize == "g2o":
+        try:
+            pose_graph_g2o.optimize(config["max_iterations"])
+        except:
+            pose_graph_g2o = make_pose_graph_g2o.PoseGraphOptimizerG2o()
+            pose_graph_g2o.make_pose_graph(tile_info_dict, trans_data_manager, config)
+            pose_graph_g2o.save(join(config["path_data"], config["rough_g2o_pg_name"]))
+
+        pose_graph_g2o.optimize(config["max_iterations"])
+        pose_graph_g2o.save(join(config["path_data"], config["optimized_g2o_pg_name"]))
+
+        tile_info_dict = pose_graph_g2o.update_tile_info_dict(tile_info_dict)
+        save_tile_info_dict(join(config["path_data"], config["tile_info_dict_name"]), tile_info_dict)
+
     # Visualize ==================================================================================
     if args.vpg_raw:
-        visualize_tile_info_dict(tile_info_dict=tile_info_dict, show_regular_frame=False)
+        visualization.visualize_tile_info_dict(tile_info_dict=tile_info_dict,
+                                               show_point=False, show_edge=False,
+                                               show_key_frame=True,
+                                               show_regular_frame=True,
+                                               show_sensor_frame=False,
+                                               show_senor_point=True)
+
+        visualization.visualize_tile_info_dict_as_point_cloud(tile_info_dict, 0.1)
+

@@ -43,6 +43,7 @@ class TileInfo:
         self.april_tags = []
         self.trans_from_april_tag = {}
 
+        self.pose_matrix = numpy.identity(4)
         self.init_transform_matrix = numpy.identity(4)
 
         self.odometry_list = []
@@ -119,6 +120,7 @@ def make_tile_info_dict_all(config):
         tile_info.init_transform_matrix = numpy.dot(
             numpy.dot(camera_offset_matrix_inv, tile_info.init_transform_matrix),
             camera_offset_matrix)
+        tile_info.pose_matrix = tile_info.init_transform_matrix
         tile_info_dict_all[tile_info.tile_index] = tile_info
         # ===========================================================================================
 
@@ -156,6 +158,7 @@ def make_info_dict(tile_info_dict_all, config):
         #     tile_info.is_keyframe = False
         # recenter all the tiles to the reference tile.
         tile_info.init_transform_matrix = numpy.dot(reference_trans_matrix_inv, tile_info.init_transform_matrix)
+        tile_info.pose_matrix = tile_info.init_transform_matrix
         (pt, pr, pz, ps) = transforms3d.affines.decompose44(tile_info.init_transform_matrix)
 
         tile_info.position = pt
@@ -281,6 +284,7 @@ def save_tile_info_dict(tile_info_dict_file_path, tile_info_dict):
                              "april_tags": april_tags_data,
                              "trans_from_april_tag": trans_from_april_tag_data,
 
+                             "pose_matrix": tile_info_dict[tile_info_key].pose_matrix.tolist(),
                              "init_transform_matrix": tile_info_dict[tile_info_key].init_transform_matrix.tolist(),
                              "odometry_list": tile_info_dict[tile_info_key].odometry_list,
                              "potential_loop_closure": tile_info_dict[tile_info_key].potential_loop_closure}
@@ -319,6 +323,7 @@ def read_tile_info_dict(tile_info_dict_file_path):
                 numpy.asarray(tile_info_dict_data[tile_info_key]["trans_from_april_tag"][trans_from_april_tag_id])
 
         new_tile_info.init_transform_matrix = numpy.asarray(tile_info_dict_data[tile_info_key]["init_transform_matrix"])
+        new_tile_info.pose_matrix = numpy.asarray(tile_info_dict_data[tile_info_key]["pose_matrix"])
         new_tile_info.odometry_list = tile_info_dict_data[tile_info_key]["odometry_list"]
         new_tile_info.potential_loop_closure = tile_info_dict_data[tile_info_key]["potential_loop_closure"]
 
