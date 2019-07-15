@@ -100,7 +100,7 @@ if __name__ == "__main__":
     # Prepare tile info dict ======================================================================
     if args.dict == "make_all":
         tile_info_dict_all = make_tile_info_dict_all(config)
-
+        tile_info_dict = make_info_dict(tile_info_dict_all, config)
     elif args.dict == "make":
         try:
             tile_info_dict_all = read_tile_info_dict(join(config["path_data"], config["tile_info_dict_all_name"]))

@@ -7,6 +7,8 @@ from scipy.spatial.transform import *
 import transforms3d
 import sys
 from open3d import *
+import math
+import matplotlib.pyplot as plt
 
 sys.path.append("../Utility")
 from file import *
@@ -104,6 +106,9 @@ def make_tile_info_dict_all(config):
     # ================================================================================================================
 
     tile_info_dict_all = {}
+    tile_laplacian_list = []
+    tile_blur = 0
+
     for tile_info_file_path in tile_info_file_list:
         tile_info = load_tile_info_unity(tile_info_file_path)
         tile_info.image_path = os.path.join(config["path_data"], config["path_image_dir"], tile_info.image_path)
@@ -114,6 +119,8 @@ def make_tile_info_dict_all(config):
         [tile_info.width_by_mm, tile_info.height_by_mm] = config["size_by_mm"][tile_info.zoom_level]
 
         tile_info.laplacian = cv2.Laplacian(image, cv2.CV_64F).var()
+        tile_laplacian_list.append(tile_info.laplacian)
+
         tile_info.init_transform_matrix = tile_generate_init_transform_matrix(tile_info.position, tile_info.rotation)
 
         # camera offset calibration. Might need to be adjusted in the future.========================
@@ -124,8 +131,22 @@ def make_tile_info_dict_all(config):
         tile_info_dict_all[tile_info.tile_index] = tile_info
         # ===========================================================================================
 
-        # if tile_info.laplacian < 1000:
-        #     print("Blur: %05d" % tile_info.tile_index)
+        if tile_info.laplacian < 1000:
+            tile_blur += 1
+            print("Blur: %05d" % tile_info.tile_index)
+
+    print("%d tiles out of %d in total are blurred" % (tile_blur, len(tile_info_dict_all)))
+
+    plt.hist(x=tile_laplacian_list)
+    # plt.hist(x=tile_laplacian_list, bins=numpy.arange(-5.0, 5.5, 0.5))
+    plt.title('The laplacian of tile images')
+    plt.xlabel('laplacian')
+    plt.ylabel('Distribution')
+    # plt.grid(axis='y', alpha=0.5)
+    # axes = plt.gca()
+    # axes.set_xlim([-5, 5])
+    # axes.set_ylim([0, 3000000])
+    plt.show()
 
     save_tile_info_dict(join(config["path_data"], config["tile_info_dict_all_name"]), tile_info_dict_all)
     return tile_info_dict_all
