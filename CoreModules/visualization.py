@@ -132,7 +132,6 @@ def visualize_tile_info_dict(tile_info_dict, show_point=True, show_edge=True,
 
     # make sensor data point cloud
 
-
     draw_list = []
     if show_point:
         draw_list.append(tile_info_point_cloud)

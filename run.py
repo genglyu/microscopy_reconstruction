@@ -15,7 +15,7 @@ from tile_info_processing import *
 
 import visualization
 import pose_estimation_cv
-import make_pose_graph_g2o
+import pose_graph_g2o
 
 
 if __name__ == "__main__":
@@ -118,12 +118,14 @@ if __name__ == "__main__":
         trans_data_manager = pose_estimation_cv.TransDataG2o(tile_info_dict, config)
         try:
             trans_data_manager.read(join(config["path_data"], config["local_trans_dict_name"]))
+            tile_info_dict = trans_data_manager.update_tile_info_dict_confirmed_loop_closure()
         except:
             trans_data_manager.update_local_trans_data_multiprocessing()
+            tile_info_dict = trans_data_manager.update_tile_info_dict_confirmed_loop_closure()
             trans_data_manager.save(join(config["path_data"], config["local_trans_dict_name"]))
     # Make pose graph ============================================================================
     if args.make_pose_graph == "g2o":
-        pose_graph_g2o = make_pose_graph_g2o.PoseGraphOptimizerG2o()
+        pose_graph_g2o = pose_graph_g2o.PoseGraphOptimizerG2o()
         pose_graph_g2o.make_pose_graph(tile_info_dict, trans_data_manager, config)
         # tile_info_dict = pose_graph_g2o.update_tile_info_dict(tile_info_dict)
         pose_graph_g2o.save(join(config["path_data"], config["rough_g2o_pg_name"]))
@@ -132,7 +134,7 @@ if __name__ == "__main__":
         try:
             pose_graph_g2o.optimize(config["max_iterations"])
         except:
-            pose_graph_g2o = make_pose_graph_g2o.PoseGraphOptimizerG2o()
+            pose_graph_g2o = pose_graph_g2o.PoseGraphOptimizerG2o()
             pose_graph_g2o.make_pose_graph(tile_info_dict, trans_data_manager, config)
             pose_graph_g2o.save(join(config["path_data"], config["rough_g2o_pg_name"]))
 

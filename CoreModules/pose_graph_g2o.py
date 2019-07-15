@@ -18,9 +18,13 @@ class PoseGraphOptimizerG2o(g2o.SparseOptimizer):
     # But it should be transparent from outside.
     def __init__(self):
         super().__init__()
-        solver = g2o.BlockSolverSE3(g2o.LinearSolverCholmodSE3())
-        solver = g2o.OptimizationAlgorithmLevenberg(solver)
-        super().set_algorithm(solver)
+        # solver = g2o.BlockSolverSE3(g2o.LinearSolverCholmodSE3())
+        solver = g2o.BlockSolverSE3(g2o.LinearSolverEigenSE3())
+
+        algorithm = g2o.OptimizationAlgorithmLevenberg(solver)
+        # algorithm = g2o.OptimizationAlgorithmDogleg(solver)
+        super().set_verbose(True)
+        super().set_algorithm(algorithm)
 
     def optimize(self, max_iterations=200):
         super().initialize_optimization()
@@ -86,11 +90,11 @@ class PoseGraphOptimizerG2o(g2o.SparseOptimizer):
                                            trans=trans,
                                            info=trans_info_matching_g2o(conf, config["odometry_info_weight"]))
 
-            for loop_closure_t in tile_info.potential_loop_closure:
+            for loop_closure_t in tile_info.confirmed_loop_closure:
                 success, conf, trans = \
                     trans_data_manager.get_trans_extend(s_id=tile_info.tile_index, t_id=loop_closure_t)
                 if success:
-                    self.add_loop_closure_edge(s_id= tile_info.tile_index, t_id=loop_closure_t,
+                    self.add_loop_closure_edge(s_id=tile_info.tile_index, t_id=loop_closure_t,
                                                trans=trans,
                                                info=trans_info_matching_g2o(conf, config["loop_closure_info_weight"]))
 

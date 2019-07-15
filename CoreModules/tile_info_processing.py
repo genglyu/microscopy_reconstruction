@@ -50,6 +50,7 @@ class TileInfo:
 
         self.odometry_list = []
         self.potential_loop_closure = []  # Use the real tile index rather than key in dict. (key should be the same)
+        self.confirmed_loop_closure = []
 
 
 def tile_generate_init_transform_matrix(position, rotation, scale=[1, 1, 1]):  # After updating and normalize tile info.
@@ -308,7 +309,8 @@ def save_tile_info_dict(tile_info_dict_file_path, tile_info_dict):
                              "pose_matrix": tile_info_dict[tile_info_key].pose_matrix.tolist(),
                              "init_transform_matrix": tile_info_dict[tile_info_key].init_transform_matrix.tolist(),
                              "odometry_list": tile_info_dict[tile_info_key].odometry_list,
-                             "potential_loop_closure": tile_info_dict[tile_info_key].potential_loop_closure}
+                             "potential_loop_closure": tile_info_dict[tile_info_key].potential_loop_closure,
+                             "confirmed_loop_closure": tile_info_dict[tile_info_key].confirmed_loop_closure}
         data_to_save[tile_info_key] = tile_info_to_save
     json.dump(data_to_save, open(tile_info_dict_file_path, "w"), indent=4)
 
@@ -347,6 +349,7 @@ def read_tile_info_dict(tile_info_dict_file_path):
         new_tile_info.pose_matrix = numpy.asarray(tile_info_dict_data[tile_info_key]["pose_matrix"])
         new_tile_info.odometry_list = tile_info_dict_data[tile_info_key]["odometry_list"]
         new_tile_info.potential_loop_closure = tile_info_dict_data[tile_info_key]["potential_loop_closure"]
+        new_tile_info.confirmed_loop_closure = tile_info_dict_data[tile_info_key]["confirmed_loop_closure"]
 
         tile_info_dict[int(tile_info_key)] = new_tile_info
 

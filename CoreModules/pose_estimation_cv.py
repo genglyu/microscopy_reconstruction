@@ -60,12 +60,22 @@ class TransDataG2o:
         estimation_results = Parallel(n_jobs=max_thread)(
             delayed(self.get_trans)(s_id, t_id)  # Can be optimised by loading only once
             for [s_id, t_id] in estimation_list)
+
         for local_trans_estimation in estimation_results:
             self.update_trans(s_id=local_trans_estimation.s,
                               t_id=local_trans_estimation.t,
                               success=local_trans_estimation.success,
                               conf=local_trans_estimation.conf,
                               trans=local_trans_estimation.trans)
+
+    def update_tile_info_dict_confirmed_loop_closure(self):
+        for tile_info_key in self.tile_info_dict:
+            tile_info = self.tile_info_dict[tile_info_key]
+            for potential_loop_closure_t in tile_info.potential_loop_closure:
+                if self.get_trans(tile_info.tile_index, potential_loop_closure_t).success:
+                    if potential_loop_closure_t not in tile_info.confirmed_loop_closure:
+                        tile_info.confirmed_loop_closure.append(potential_loop_closure_t)
+        return self.tile_info_dict
 
     def save(self, path=None):
         if path is None:
