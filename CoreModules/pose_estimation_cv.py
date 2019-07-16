@@ -20,6 +20,8 @@ class LocalTransEstimation:
 
 
 class TransDataG2o:
+    # def __init__(self):
+    #     self.trans_dict = {}
     def __init__(self, tile_info_dict, config):
         self.trans_dict = {}
         self.tile_info_dict = tile_info_dict
@@ -57,16 +59,40 @@ class TransDataG2o:
                 estimation_list.append([s_id, t_id])
 
         max_thread = min(multiprocessing.cpu_count(), max(len(estimation_list), 1))
+
+        # There might be an efficiency issue. the function self.get_trans(s, t)
+        # It might be better if there is a independent function.
+        # Currently, the multiprocessing does have multiple threads, but there is only one core working.
+        # it is possible that some part of the class instance cannot be shared between cores.
         estimation_results = Parallel(n_jobs=max_thread)(
-            delayed(self.get_trans)(s_id, t_id)  # Can be optimised by loading only once
+            delayed(trans_estimation_pure)(s_id, t_id,
+                                           self.tile_info_dict[s_id].image_path,
+                                           self.tile_info_dict[t_id].image_path,
+                                           self.tile_info_dict[s_id].width_by_pixel,
+                                           self.tile_info_dict[s_id].height_by_pixel,
+                                           self.tile_info_dict[t_id].width_by_pixel,
+                                           self.tile_info_dict[t_id].height_by_pixel,
+                                           self.tile_info_dict[s_id].width_by_mm,
+                                           self.tile_info_dict[s_id].height_by_mm,
+                                           self.tile_info_dict[t_id].width_by_mm,
+                                           self.tile_info_dict[t_id].height_by_mm,
+                                           self.config["crop_width_by_pixel"],
+                                           self.config["crop_height_by_pixel"],
+                                           self.tile_info_dict[s_id].init_transform_matrix,
+                                           self.tile_info_dict[t_id].init_transform_matrix,
+                                           self.config["n_features"],
+                                           self.config["num_matches_thresh1"],
+                                           self.config["conf_threshold"],
+                                           self.config["scaling_tolerance"],
+                                           self.config["rotation_tolerance"])
             for [s_id, t_id] in estimation_list)
 
-        for local_trans_estimation in estimation_results:
-            self.update_trans(s_id=local_trans_estimation.s,
-                              t_id=local_trans_estimation.t,
-                              success=local_trans_estimation.success,
-                              conf=local_trans_estimation.conf,
-                              trans=local_trans_estimation.trans)
+        for result in estimation_results:
+            self.update_trans(s_id=result[0],
+                              t_id=result[1],
+                              success=result[2],
+                              conf=result[3],
+                              trans=result[4])
 
     def update_tile_info_dict_confirmed_loop_closure(self):
         for tile_info_key in self.tile_info_dict:
@@ -135,7 +161,7 @@ def trans_estimation(s_info: TileInfo, t_info: TileInfo, config):
                                                       width_by_mm_t=t_info.width_by_mm,
                                                       height_by_mm_t=t_info.height_by_mm)
 
-    if not trans_local_check(trans_planar_3d, s_info, t_info,
+    if not trans_local_check(trans_planar_3d, s_info.init_transform_matrix, t_info.init_transform_matrix,
                              scaling_tolerance=config["scaling_tolerance"],
                              rotation_tolerance=config["rotation_tolerance"]):
         return False, 0, numpy.identity(4)
@@ -143,6 +169,61 @@ def trans_estimation(s_info: TileInfo, t_info: TileInfo, config):
     trans_3d = transform_planar_add_normal_direction(trans_planar_3d,
                                                      s_info.init_transform_matrix, t_info.init_transform_matrix)
     return True, matching_conf, trans_3d
+
+
+def trans_estimation_pure(s_id, t_id,
+                          s_img_path,
+                          t_img_path,
+                          width_by_pixel_s,
+                          height_by_pixel_s,
+                          width_by_pixel_t,
+                          height_by_pixel_t,
+                          width_by_mm_s,
+                          height_by_mm_s,
+                          width_by_mm_t,
+                          height_by_mm_t,
+                          crop_w,
+                          crop_h,
+                          s_init_trans,
+                          t_init_trans,
+                          n_features,
+                          num_matches_thresh1,
+                          match_conf,
+                          scaling_tolerance,
+                          rotation_tolerance):
+
+    s_img = cv2.imread(s_img_path)
+    t_img = cv2.imread(t_img_path)
+
+    matching_conf, trans_cv_2d = transformation_cv(s_img, t_img,
+                                                   crop_w=crop_w,
+                                                   crop_h=crop_h,
+                                                   nfeatures=n_features,
+                                                   num_matches_thresh1=num_matches_thresh1,
+                                                   match_conf=match_conf)
+
+    if matching_conf == 0:
+        return s_id, t_id, False, 0, numpy.identity(4)
+
+    trans_planar_3d = transform_convert_from_2d_to_3d(trans_cv_2d=trans_cv_2d,
+                                                      width_by_pixel_s=width_by_pixel_s,
+                                                      height_by_pixel_s=height_by_pixel_s,
+                                                      width_by_mm_s=width_by_mm_s,
+                                                      height_by_mm_s=height_by_mm_s,
+                                                      width_by_pixel_t=width_by_pixel_t,
+                                                      height_by_pixel_t=height_by_pixel_t,
+                                                      width_by_mm_t=width_by_mm_t,
+                                                      height_by_mm_t=height_by_mm_t)
+
+    if not trans_local_check(trans_planar_3d, s_init_trans, t_init_trans,
+                             scaling_tolerance=scaling_tolerance,
+                             rotation_tolerance=rotation_tolerance):
+        print("Tile %05d and %05d : Local trans check fails " % (s_id, t_id))
+        return s_id, t_id, False, matching_conf, trans_planar_3d
+    else:
+        print("Tile %05d and %05d : Trans check passed" % (s_id, t_id))
+        trans_3d = transform_planar_add_normal_direction(trans_planar_3d, s_init_trans, t_init_trans)
+        return s_id, t_id, True, matching_conf, trans_3d
 
 
 # Can only take color images
@@ -159,22 +240,26 @@ def transformation_cv(s_img, t_img, crop_w=0, crop_h=0,
     matcher = cv2.detail_AffineBestOf2NearestMatcher(full_affine=False, try_use_gpu=True,
                                                      match_conf=match_conf,
                                                      num_matches_thresh1=num_matches_thresh1)
-
     source_feature = cv2.detail.computeImageFeatures2(featuresFinder=orb_finder, image=s_img_crop)
     target_feature = cv2.detail.computeImageFeatures2(featuresFinder=orb_finder, image=t_img_crop)
     matching_result = matcher.apply(source_feature, target_feature)
+    matcher.collectGarbage()
+    # print(type(matching_result))
 
     match_conf = matching_result.confidence
-    trans_cv = numpy.asarray(matching_result.H)
 
-    trans_deoffset = numpy.asarray([[1.0, 0, crop_w],
-                                    [0, 1.0, crop_h],
-                                    [0, 0, 1]])
-    trans_offset = numpy.asarray([[1.0, 0, -crop_w],
-                                  [0, 1.0, -crop_h],
-                                  [0, 0, 1]])
-    trans_cv = numpy.dot(trans_deoffset, numpy.dot(trans_cv, trans_offset))
+    if match_conf != 0.0:
+        trans_cv = numpy.asarray(matching_result.H)
 
+        trans_deoffset = numpy.asarray([[1.0, 0, crop_w],
+                                        [0, 1.0, crop_h],
+                                        [0, 0, 1]])
+        trans_offset = numpy.asarray([[1.0, 0, -crop_w],
+                                      [0, 1.0, -crop_h],
+                                      [0, 0, 1]])
+        trans_cv = numpy.dot(trans_deoffset, numpy.dot(trans_cv, trans_offset))
+    else:
+        trans_cv = numpy.identity(4)
     return match_conf, trans_cv
 
 
@@ -234,10 +319,30 @@ def transform_planar_add_normal_direction(trans_planar, trans_s, trans_t):
     return trans_with_normal_direction
 
 
-def trans_local_check(trans_local, s_info, t_info, scaling_tolerance=0.05, rotation_tolerance=0.2):
+# def trans_local_check_tile(trans_local, s_info, t_info, scaling_tolerance=0.05, rotation_tolerance=0.2):
+#     trans_diff = numpy.dot(
+#         numpy.linalg.inv(numpy.dot(s_info.init_transform_matrix, numpy.linalg.inv(t_info.init_transform_matrix))),
+#         trans_local)
+#
+#     (pt, pr, pz, ps) = transforms3d.affines.decompose44(trans_diff)
+#     rotation_euler_z = Rotation.from_dcm(pr).as_euler("xyz")[2]
+#
+#     if abs(pz[0] - 1) > scaling_tolerance \
+#             or abs(pz[1] - 1) > scaling_tolerance \
+#             or abs(pz[2] - 1) > scaling_tolerance:
+#         print("Tile %05d and %05d : Scaling check fails for (%4f, %4f, %4f)"
+#               % (s_info.tile_index, t_info.tile_index, pz[0], pz[1], pz[2]))
+#         return False
+#     if abs(rotation_euler_z) > rotation_tolerance:
+#         print("Tile %05d and %05d : Rotation check fails for (%4f)"
+#               % (s_info.tile_index, t_info.tile_index, rotation_euler_z))
+#         return False
+#     return True
+
+
+def trans_local_check(trans_local, s_init_trans, t_init_trans, scaling_tolerance=0.05, rotation_tolerance=0.2):
     trans_diff = numpy.dot(
-        numpy.linalg.inv(numpy.dot(s_info.init_transform_matrix, numpy.linalg.inv(t_info.init_transform_matrix))),
-        trans_local)
+        numpy.linalg.inv(numpy.dot(s_init_trans, numpy.linalg.inv(t_init_trans))), trans_local)
 
     (pt, pr, pz, ps) = transforms3d.affines.decompose44(trans_diff)
     rotation_euler_z = Rotation.from_dcm(pr).as_euler("xyz")[2]
@@ -245,12 +350,8 @@ def trans_local_check(trans_local, s_info, t_info, scaling_tolerance=0.05, rotat
     if abs(pz[0] - 1) > scaling_tolerance \
             or abs(pz[1] - 1) > scaling_tolerance \
             or abs(pz[2] - 1) > scaling_tolerance:
-        print("Tile %05d and %05d : Scaling check fails for (%4f, %4f, %4f)"
-              % (s_info.tile_index, t_info.tile_index, pz[0], pz[1], pz[2]))
         return False
     if abs(rotation_euler_z) > rotation_tolerance:
-        print("Tile %05d and %05d : Rotation check fails for (%4f)"
-              % (s_info.tile_index, t_info.tile_index, rotation_euler_z))
         return False
     return True
 
