@@ -107,7 +107,7 @@ def make_tile_info_dict_all(config):
     # ================================================================================================================
 
     tile_info_dict_all = {}
-    tile_laplacian_list = []
+    # tile_laplacian_list = []
     tile_blur = 0
 
     for tile_info_file_path in tile_info_file_list:
@@ -120,7 +120,7 @@ def make_tile_info_dict_all(config):
         [tile_info.width_by_mm, tile_info.height_by_mm] = config["size_by_mm"][tile_info.zoom_level]
 
         tile_info.laplacian = cv2.Laplacian(image, cv2.CV_64F).var()
-        tile_laplacian_list.append(tile_info.laplacian)
+        # tile_laplacian_list.append(tile_info.laplacian)
 
         tile_info.init_transform_matrix = tile_generate_init_transform_matrix(tile_info.position, tile_info.rotation)
 
@@ -131,25 +131,23 @@ def make_tile_info_dict_all(config):
         tile_info.pose_matrix = tile_info.init_transform_matrix
         tile_info_dict_all[tile_info.tile_index] = tile_info
         # ===========================================================================================
-
-        if tile_info.laplacian < 1000:
-            tile_blur += 1
-            print("Blur: %05d" % tile_info.tile_index)
+        # if tile_info.laplacian < 1000:
+        #     tile_blur += 1
+        #     print("Blur: %05d" % tile_info.tile_index)
 
     print("%d tiles out of %d in total are blurred" % (tile_blur, len(tile_info_dict_all)))
 
-    plt.hist(x=tile_laplacian_list)
-    # plt.hist(x=tile_laplacian_list, bins=numpy.arange(-5.0, 5.5, 0.5))
-    plt.title('The laplacian of tile images')
-    plt.xlabel('laplacian')
-    plt.ylabel('Distribution')
-    # plt.grid(axis='y', alpha=0.5)
-    # axes = plt.gca()
-    # axes.set_xlim([-5, 5])
-    # axes.set_ylim([0, 3000000])
-    plt.show()
+    # plt.hist(x=tile_laplacian_list)
+    # # plt.hist(x=tile_laplacian_list, bins=numpy.arange(-5.0, 5.5, 0.5))
+    # plt.title('The laplacian of tile images')
+    # plt.xlabel('laplacian')
+    # plt.ylabel('Distribution')
+    # # plt.grid(axis='y', alpha=0.5)
+    # # axes = plt.gca()
+    # # axes.set_xlim([-5, 5])
+    # # axes.set_ylim([0, 3000000])
+    # plt.show()
 
-    save_tile_info_dict(join(config["path_data"], config["tile_info_dict_all_name"]), tile_info_dict_all)
     return tile_info_dict_all
 
 
@@ -234,7 +232,7 @@ def make_info_dict(tile_info_dict_all, config):
                                 and abs(trans[0][3]) < trans_w_range and abs(trans[1][3]) < trans_h_range:
                             tile_info.potential_loop_closure.append(potential_adjacent_tile_index)
 
-    save_tile_info_dict(join(config["path_data"], config["tile_info_dict_name"]), tile_info_dict_subsample)
+    # save_tile_info_dict(join(config["path_data"], config["tile_info_dict_name"]), tile_info_dict_subsample)
     return tile_info_dict_subsample
 
 

@@ -78,7 +78,8 @@ class PoseGraphOptimizerG2o(g2o.SparseOptimizer):
             tile_info = tile_info_dict[tile_info_key]
             self.add_node(id_outside=tile_info.tile_index,
                           trans=tile_info.init_transform_matrix,
-                          sensor_info=trans_info_sensor_g2o(config["sensor_info_weight"]),
+                          sensor_info=trans_info_sensor_g2o(config["sensor_info_weight"],
+                                                            numpy.asarray(config["sensor_info_g2o"])),
                           fixed=False)
         for tile_info_key in tile_info_dict:
             tile_info = tile_info_dict[tile_info_key]
@@ -88,7 +89,8 @@ class PoseGraphOptimizerG2o(g2o.SparseOptimizer):
                 if success:
                     self.add_odometry_edge(s_id= tile_info.tile_index, t_id=odometry_t,
                                            trans=trans,
-                                           info=trans_info_matching_g2o(conf, config["odometry_info_weight"]))
+                                           info=trans_info_matching_g2o(conf, config["odometry_info_weight"],
+                                                                        numpy.asarray(config["match_info_g2o"])))
 
             for loop_closure_t in tile_info.confirmed_loop_closure:
                 success, conf, trans = \
@@ -96,7 +98,8 @@ class PoseGraphOptimizerG2o(g2o.SparseOptimizer):
                 if success:
                     self.add_loop_closure_edge(s_id=tile_info.tile_index, t_id=loop_closure_t,
                                                trans=trans,
-                                               info=trans_info_matching_g2o(conf, config["loop_closure_info_weight"]))
+                                               info=trans_info_matching_g2o(conf, config["loop_closure_info_weight"],
+                                                                            numpy.asarray(config["match_info_g2o"])))
 
     def update_tile_info_dict(self, tile_info_dict):
         for tile_info_key in tile_info_dict:

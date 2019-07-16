@@ -25,30 +25,40 @@ if __name__ == "__main__":
 
     parser.add_argument("config", help="path to the config file")
 
-    parser.add_argument('--dict', '-d',
-                        help="Options: make or load. If load, will use default path from config file")
+    parser.add_argument('--dict_make_tile_info_dict_all', '-d_make_all',
+                        action="store_true",
+                        help="Make tile_info_dict_all, calculate the laplacian of images and save.")
+    parser.add_argument('--dict_load_tile_info_dict_all', '-d_load_all',
+                        action="store_true",
+                        help="Load tile_info_dict_all.")
+
+    parser.add_argument('--dict_make', '-d_make',
+                        action="store_true",
+                        help="Pick the clear image from tile_info_dict_all to make tile_info dict. "
+                             "Find potential loop closures")
+    parser.add_argument('--dict_load', '-d_load',
+                        action="store_true",
+                        help="Pick the clear image from tile_info_dict_all to make tile_info dict. "
+                             "Find potential loop closures")
 
     # estimate all the local transformation involved. Information matrix have different format.
-    parser.add_argument('--register', '-r',
-                        help="Options: cv_open3d, cv_g2o. Register pose graph and generate local transformations.")
+    parser.add_argument('--register_g2o', '-r_g2o',
+                        action="store_true",
+                        help="Register pose graph and generate local transformations without calculating information."
+                             "Add confirmed loop closure to tile_info_dict members")
     # make pose graph. Both pose graph and information matrix have different format.
-    parser.add_argument('--make_pose_graph', '-m',
-                        help="open3d or g2o. These two use different pose graph format.")
-
-    parser.add_argument('--optimize', '-op',
-                        help="Options: cv_open3d, cv_g2o. Optimize pose graph")
+    parser.add_argument('--make_pose_graph_g2o', '-m_g2o',
+                        action="store_true",
+                        help="make g2o pose graph and save.")
+    parser.add_argument('--optimize_g2o', '-op_g2o',
+                        action="store_true",
+                        help="Optimize g2o pose graph, update the pose of each tile in tile_info_dict and save the "
+                             "results.")
 
     # Visualize pose graph. Actually, raw and rough option should have same results.
     parser.add_argument('-vpg_raw',
                         action="store_true",
                         help='Visualize raw pose graph')
-    parser.add_argument('-vpg_open3d_rough', '-vpg_o_r',
-                        action="store_true",
-                        help='Visualize rough pose graph')
-    parser.add_argument('-vpg_open3d_fine', '-vpg_o_f',
-                        action="store_true",
-                        help='Visualize optimized pose graph')
-
     parser.add_argument('-vpg_g2o_rough', '-vpg_g_r',
                         action="store_true",
                         help='Visualize raw pose graph')
@@ -75,9 +85,12 @@ if __name__ == "__main__":
 
     args = parser.parse_args()
 
-    if not args.dict\
-            and not args.register\
-            and not args.optimize\
+    if not args.dict_make_tile_info_dict_all\
+            and not args.dict_load_tile_info_dict_all\
+            and not args.dict_make \
+            and not args.dict_load \
+            and not args.register_g2o\
+            and not args.make_pose_graph_g2o\
             and not args.vpg_raw \
             and not args.vpg_open3d_rough \
             and not args.vpg_open3d_fine \
@@ -98,47 +111,72 @@ if __name__ == "__main__":
     assert config is not None
 
     # Prepare tile info dict ======================================================================
-    if args.dict == "make_all":
+    if args.dict_make_tile_info_dict_all:
         tile_info_dict_all = make_tile_info_dict_all(config)
-        tile_info_dict = make_info_dict(tile_info_dict_all, config)
-    elif args.dict == "make":
+        save_tile_info_dict(join(config["path_data"], config["tile_info_dict_all_name"]), tile_info_dict_all)
+    if args.dict_load_tile_info_dict_all:
+        tile_info_dict_all = read_tile_info_dict(join(config["path_data"], config["tile_info_dict_all_name"]))
+
+    if args.dict_make:
         try:
-            tile_info_dict_all = read_tile_info_dict(join(config["path_data"], config["tile_info_dict_all_name"]))
+            tile_info_dict = make_info_dict(tile_info_dict_all, config)
         except:
-            tile_info_dict_all = make_tile_info_dict_all(config)
-        tile_info_dict = make_info_dict(tile_info_dict_all, config)
-    elif args.dict == "load":
-        tile_info_dict = read_tile_info_dict(join(config["path_data"], config["tile_info_dict_name"]))
-    else:
-        print("Wrong input for -dict.")
-        sys.exit()
+            try:
+                tile_info_dict_all = read_tile_info_dict(join(config["path_data"], config["tile_info_dict_all_name"]))
+            except:
+                tile_info_dict_all = make_tile_info_dict_all(config)
+            tile_info_dict = make_info_dict(tile_info_dict_all, config)
+        save_tile_info_dict(join(config["path_data"], config["tile_info_dict_name"]), tile_info_dict)
+
+    if args.dict_load:
+        dict_path = join(config["path_data"], config["tile_info_dict_name"])
+        if os.path.isfile(dict_path):
+            tile_info_dict = read_tile_info_dict(dict_path)
+        else:
+            print("No tile_info_dict available at default path")
+            sys.exit()
 
     # Registering ================================================================================
-    if args.register == "g2o":
-        trans_data_manager = pose_estimation_cv.TransDataG2o(tile_info_dict, config)
-        try:
-            trans_data_manager.read(join(config["path_data"], config["local_trans_dict_name"]))
+    if args.register_g2o:
+        if tile_info_dict is not None:
+            trans_data_manager = pose_estimation_cv.TransDataG2o(tile_info_dict, config)
+            try:
+                trans_data_manager.read(join(config["path_data"], config["local_trans_dict_name"]))
+            except:
+                print("No trans_data available in default path. Start updating")
+                trans_data_manager.update_local_trans_data_multiprocessing()
+                trans_data_manager.save(join(config["path_data"], config["local_trans_dict_name"]))
             tile_info_dict = trans_data_manager.update_tile_info_dict_confirmed_loop_closure()
-        except:
-            trans_data_manager.update_local_trans_data_multiprocessing()
-            tile_info_dict = trans_data_manager.update_tile_info_dict_confirmed_loop_closure()
-            trans_data_manager.save(join(config["path_data"], config["local_trans_dict_name"]))
-    # Make pose graph ============================================================================
-    if args.make_pose_graph == "g2o":
-        pose_graph_g2o = pose_graph_g2o.PoseGraphOptimizerG2o()
-        pose_graph_g2o.make_pose_graph(tile_info_dict, trans_data_manager, config)
-        # tile_info_dict = pose_graph_g2o.update_tile_info_dict(tile_info_dict)
-        pose_graph_g2o.save(join(config["path_data"], config["rough_g2o_pg_name"]))
+        else:
+            print("No tile_info_dict available in RAM")
+            sys.exit()
 
-    if args.optimize == "g2o":
+    # Make pose graph ============================================================================
+    if args.make_pose_graph_g2o:
+        pose_graph_g2o = pose_graph_g2o.PoseGraphOptimizerG2o()
+        try:
+            pose_graph_g2o.make_pose_graph(tile_info_dict, trans_data_manager, config)
+            pose_graph_g2o.save(join(config["path_data"], config["rough_g2o_pg_name"]))
+        except:
+            print("No tile_info_dict / trans_data_manager available in RAM or at default path")
+            sys.exit()
+            # tile_info_dict = pose_graph_g2o.update_tile_info_dict(tile_info_dict)
+
+    if args.optimize_g2o:
+        print("Start optimizing the pose graph =============================================")
         try:
             pose_graph_g2o.optimize(config["max_iterations"])
         except:
-            pose_graph_g2o = pose_graph_g2o.PoseGraphOptimizerG2o()
-            pose_graph_g2o.make_pose_graph(tile_info_dict, trans_data_manager, config)
-            pose_graph_g2o.save(join(config["path_data"], config["rough_g2o_pg_name"]))
+            print("No rough_pose_graph available in RAM. Try reading from default path")
+            rough_posegraph_path = join(config["path_data"], config["rough_g2o_pg_name"])
+            if os.path.isfile(rough_posegraph_path):
+                pose_graph_g2o = pose_graph_g2o.PoseGraphOptimizerG2o()
+                pose_graph_g2o.load(rough_posegraph_path)
+                pose_graph_g2o.optimize(config["max_iterations"])
+            else:
+                print("No rough_pose_graph available at default path")
+                sys.exit()
 
-        pose_graph_g2o.optimize(config["max_iterations"])
         pose_graph_g2o.save(join(config["path_data"], config["optimized_g2o_pg_name"]))
 
         tile_info_dict = pose_graph_g2o.update_tile_info_dict(tile_info_dict)
@@ -146,12 +184,6 @@ if __name__ == "__main__":
 
     # Visualize ==================================================================================
     if args.vpg_raw:
-        visualization.visualize_tile_info_dict(tile_info_dict=tile_info_dict,
-                                               show_point=False, show_edge=False,
-                                               show_key_frame=True,
-                                               show_regular_frame=True,
-                                               show_sensor_frame=False,
-                                               show_senor_point=True)
-
-        visualization.visualize_tile_info_dict_as_point_cloud(tile_info_dict, 0.1)
+        viewer = visualization.MicroscopyReconstructionVisualizerOpen3d( tile_info_dict, config)
+        viewer.visualize_config()
 

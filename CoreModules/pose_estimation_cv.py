@@ -356,23 +356,13 @@ def trans_local_check(trans_local, s_init_trans, t_init_trans, scaling_tolerance
     return True
 
 
-def trans_info_matching_g2o(match_conf, weight=1):
+def trans_info_matching_g2o(match_conf, weight=1, match_info_g2o=numpy.identity(4)):
     # The order should be: x, y, z, rotation_x, rotation_y, rotation_z
-    info_matrix = weight * match_conf * numpy.asarray([[3, 0, 0, 0, 0, 0],
-                                                       [0, 3, 0, 0, 0, 0],
-                                                       [0, 0, 2, 0, 0, 0],
-                                                       [0, 0, 0, 2, 0, 0],
-                                                       [0, 0, 0, 0, 2, 0],
-                                                       [0, 0, 0, 0, 0, 3]])
+    info_matrix = weight * match_conf * match_info_g2o
     return info_matrix
 
 
-def trans_info_sensor_g2o(weight=1):
+def trans_info_sensor_g2o(weight=1, sensor_info_g2o=numpy.identity(4)):
     # The order should be: x, y, z, rotation_x, rotation_y, rotation_z
-    info_matrix = weight * numpy.asarray([[0, 0, 0, 0, 0, 0],
-                                          [0, 0, 0, 0, 0, 0],
-                                          [0, 0, 0, 0, 0, 0],
-                                          [0, 0, 0, 5, 0, 0],
-                                          [0, 0, 0, 0, 5, 0],
-                                          [0, 0, 0, 0, 0, 5]])
+    info_matrix = weight * sensor_info_g2o
     return info_matrix

@@ -22,7 +22,8 @@ def load_image_as_numpy_array(image_bgr, cv_scale_factor=-1, convert_to_indensit
 
 
 def load_image_as_planar_point_cloud_open3d(image_bgr, width_by_mm, height_by_mm,
-                                            cv_scale_factor=-1, convert_to_indensity=False):
+                                            cv_scale_factor=-1,
+                                            convert_to_indensity=False, color_filter=[1.0, 1.0, 1.0]):
     img_numpy_array = load_image_as_numpy_array(image_bgr, cv_scale_factor=cv_scale_factor,
                                                 convert_to_indensity=convert_to_indensity)
     (height_by_pixel, width_by_pixel, value_length) = img_numpy_array.shape
@@ -40,7 +41,7 @@ def load_image_as_planar_point_cloud_open3d(image_bgr, width_by_mm, height_by_mm
     points_normal = numpy.c_[
         numpy.zeros(pixel_amount), numpy.zeros(pixel_amount), numpy.ones(pixel_amount)]
     points_color = img_numpy_array.reshape(-1, 3)
-    points_color = points_color / 255.0
+    points_color = points_color * (numpy.asarray(color_filter) / 255.0)
 
     colored_point_cloud = PointCloud()
     colored_point_cloud.points = Vector3dVector(points_position)
