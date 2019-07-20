@@ -20,7 +20,8 @@ class TileInfo:
                  tile_info_path,
                  image_path,
                  zoom_level,
-                 position, rotation,
+                 position=numpy.array([0.0, 0.0, 0.0]),
+                 rotation=numpy.array([0.0, 0.0, 1.0, 0.0]),
                  width_by_mm=5.2,
                  height_by_mm=3.9):
         self.tile_index = tile_index
@@ -185,6 +186,8 @@ def make_info_dict(tile_info_dict_all, config):
         tile_info.rotation = Rotation.from_dcm(pr).as_quat()
 
     # Set key frames. ===============================================================================
+    # Actually, this might not be the best way of choosing key frames. Down sampling makes the key
+    # frames far away from each other.
     tile_info_point_cloud, tile_tree, tile_index_list = \
         tile_info_dict_generate_kd_tree(tile_info_dict_subsample)
     pcd_down, index_in_pcd =\

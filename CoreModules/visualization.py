@@ -440,7 +440,6 @@ def visualize_tile_info_dict_as_point_cloud(tile_info_dict, downsample_factor=-1
     draw_geometries(draw_list)
 
 
-
 # def visualize_tile_info_dict(tile_info_dict,
 #                              show_point=True, show_edge=True,
 #                              show_key_frame=True, show_regular_frame=True,
