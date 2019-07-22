@@ -8,6 +8,20 @@ from tile_info_processing import *
 from image_processing import *
 
 
+def make_connection_of_pcd_order(pcd, color=[0, 0, 0]):
+    connection = LineSet()
+    connection.points = pcd.points
+    lines = []
+    colors = []
+    for i, point in enumerate(pcd.points):
+        if i > 0:
+            lines.append([i-1, i])
+            colors.append(color)
+    connection.lines = Vector2iVector(lines)
+    connection.colors = Vector3dVector(colors)
+    return connection
+
+
 def make_point_cloud(points, color=[0.0, 0.0, 0.0], normals=None):
     pcd = PointCloud()
     pcd.points = Vector3dVector(points)
