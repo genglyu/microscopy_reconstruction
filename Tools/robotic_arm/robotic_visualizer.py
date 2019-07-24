@@ -75,8 +75,8 @@ class RoboticVisualizer:
         self.tile_wire_frame_dict = {}
 
         self.viewer.create_window()
-        self.viewer.add_geometry(self.coordinate_frame)
-        self.viewer.add_geometry(self.camera_wire_frames_controller.wire_frame)
+        # self.viewer.add_geometry(self.coordinate_frame)
+        # self.viewer.add_geometry(self.camera_wire_frames_controller.wire_frame)
         # self.viewer.run()
 
         self.img_directory_path = ""

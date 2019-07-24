@@ -12,7 +12,7 @@ sys.path.append("../../CoreModules")
 sys.path.append("../../Tools")
 from tile_info_processing import *
 import visualization
-
+import g2o
 
 trans_rob_to_camera = transforms3d.affines.compose([0, 0, 0], Rotation.from_euler("xyz", [0, 0, 0]).as_dcm(), [1, 1, 1])
 trans_camera_to_rob = numpy.linalg.inv(trans_rob_to_camera)
@@ -30,6 +30,7 @@ class RoboticSurfaceConstructor:
     def __init__(self):
         self.pose_list = []
         self.points_list = []
+        self.normal_list = []
         self.sampling_pcd = PointCloud()
         self.sampling_kd_tree = None
 
@@ -38,23 +39,26 @@ class RoboticSurfaceConstructor:
         self.integrated_surface_pcd = PointCloud()
     # Find the closest actually sampled point and then add rotation to the transformation.
 
-    def read_robotic_pose_list(self, robotic_pose_list_path):
+    def load_robotic_pose_list(self, robotic_pose_list):
         # robotic_pose_list = json.load(open(robotic_pose_list_path, "r"))["pose_list"]
-        robotic_pose_list = json.load(open(robotic_pose_list_path, "r"))
+        # robotic_pose_list = json.load(open(robotic_pose_list_path, "r"))
         for i, robotic_pose in enumerate(robotic_pose_list):
             pose = rob_pose_to_trans(robotic_pose)
             self.pose_list.append(pose)
             self.points_list.append(numpy.dot(pose, numpy.array([0, 0, 0, 1]).T).T[0:3].tolist())
+            self.normal_list.append(numpy.dot(pose, numpy.array([0, 0, 1, 0]).T).T[0:3].tolist())
 
         self.points_list = numpy.asarray(self.points_list)
 
         self.sampling_pcd.points = Vector3dVector(numpy.asarray(self.points_list))
+        self.sampling_pcd.normals = Vector3dVector(numpy.asarray(self.normal_list))
         self.sampling_pcd.colors = Vector3dVector(numpy.repeat(numpy.array([[0, 0, 0]]), len(self.points_list), axis=0))
+
         self.sampling_kd_tree = KDTreeFlann(self.sampling_pcd)
 
         draw_geometries([self.sampling_pcd])
 
-    def interpolate_sub(self, index=0, radius=0.03, interpolate_w=0.004, interpolate_h=0.003, interpolate_amount=100):
+    def interpolate_sub(self, index=0, radius=0.03, interpolate_w=0.01, interpolate_h=0.01, interpolate_amount=40):
         [_, idx, _] = self.sampling_kd_tree.search_radius_vector_3d(self.points_list[index], radius=radius)
 
         idx = list(idx)
@@ -74,7 +78,6 @@ class RoboticSurfaceConstructor:
         grid_z = griddata(xy, z, (grid_x, grid_y), method='cubic')
 
         interpolate_points = numpy.c_[grid_x.reshape(-1), grid_y.reshape(-1), grid_z.reshape(-1)]
-
         interpolate_points = interpolate_points[numpy.logical_not(numpy.isnan(interpolate_points[:, 2]))]
 
         # print(grid_x)
@@ -84,8 +87,10 @@ class RoboticSurfaceConstructor:
 
         sub_pcd = PointCloud()
         sub_pcd.points = Vector3dVector(interpolate_points)
+
         geometry.estimate_normals(sub_pcd,
                                   search_param=geometry.KDTreeSearchParamHybrid(radius=interpolate_w, max_nn=30))
+        sub_pcd.normalize_normals()
 
         normal_list = []
         for normal in sub_pcd.normals:
@@ -105,15 +110,26 @@ class RoboticSurfaceConstructor:
             # sub_pcd.transform(pose)
             self.integrated_surface_pcd = self.integrated_surface_pcd + sub_pcd
 
+        print(self.integrated_surface_pcd.normals[100])
+
         # ============================================================
         # self.integrated_surface_pcd = geometry.voxel_down_sample(self.integrated_surface_pcd, voxel_size=0.001)
-        self.integrated_surface_pcd = open3d.geometry.uniform_down_sample(input=self.integrated_surface_pcd,
-                                                                          every_k_points=100)
+        # self.integrated_surface_pcd = open3d.geometry.uniform_down_sample(input=self.integrated_surface_pcd,
+        #                                                                   every_k_points=100)
+
+        # draw_geometries([self.integrated_surface_pcd])
+
+        min_cube_size = 0.002
+        pcd_down = geometry.voxel_down_sample(input=self.integrated_surface_pcd,
+                                              voxel_size=min_cube_size)
+        min_bound = pcd_down.get_min_bound() - min_cube_size * 0.5
+        max_bound = pcd_down.get_max_bound() + min_cube_size * 0.5
+
         pcd_down, index_in_pcd = \
             geometry.voxel_down_sample_and_trace(input=self.integrated_surface_pcd,
-                                                 voxel_size=0.001,
-                                                 min_bound=numpy.asarray([0.0001, 0.0001, 0.0001]).T,
-                                                 max_bound=numpy.asarray([0.01, 0.01, 0.01]).T,
+                                                 voxel_size=min_cube_size,
+                                                 min_bound=min_bound,
+                                                 max_bound=max_bound,
                                                  approximate_class=False)
         # self.integrated_surface_pcd = pcd_down
         # print(index_in_pcd)
@@ -122,14 +138,22 @@ class RoboticSurfaceConstructor:
 
         points = []
         normals = []
-        colors = []
+        # colors = []
         for index in index_list:
             points.append(self.integrated_surface_pcd.points[index])
             normals.append(self.integrated_surface_pcd.normals[index])
             # colors.append(self.integrated_surface_pcd.colors[index])
+        self.integrated_surface_pcd = PointCloud()
         self.integrated_surface_pcd.points = Vector3dVector(points)
+        # self.integrated_surface_pcd = self.integrated_surface_pcd + self.sampling_pcd
+
         self.integrated_surface_pcd.normals = Vector3dVector(normals)
         # self.integrated_surface_pcd.colors = Vector3dVector(colors)
+
+        # geometry.estimate_normals(self.integrated_surface_pcd,
+        #                           search_param=geometry.KDTreeSearchParamHybrid(radius=0.01, max_nn=30))
+
+        draw_geometries([self.integrated_surface_pcd])
 
         # ============================================================
         connection = visualization.make_connection_of_pcd_order(self.integrated_surface_pcd)
@@ -137,9 +161,9 @@ class RoboticSurfaceConstructor:
         # ============================================================
 
         for i, position in enumerate(self.integrated_surface_pcd.points):
-            rotation_m = rotation_matrix(numpy.array([0, 0, 1]), self.integrated_surface_pcd.normals[i])
-            trans = transforms3d.affines.compose(T=position, R=rotation_m, Z=[1, 1, 1])
+            rotation_m = rotation_matrix(self.integrated_surface_pcd.normals[i])
 
+            trans = transforms3d.affines.compose(T=position, R=rotation_m, Z=[1, 1, 1])
             self.interpolated_pose_list.append(trans)
             self.interpolate_robotic_pose.append(trans_to_rob_pose(trans))
 
@@ -161,24 +185,23 @@ class RoboticSurfaceConstructor:
 #         interpolated_z = griddata(self.referenced_xy, self.referenced_z, (x, y), method='cubic')
 #         return interpolated_z
 
-def rotation_matrix(normal_s, normal_t):
-    a = normal_s / numpy.linalg.norm(normal_s)
-    b = normal_t / numpy.linalg.norm(normal_t)
-    v = numpy.cross(a, b)
-    vx = numpy.array([[0, -v[2], v[1]],
-                      [v[2], 0, -v[0]],
-                      [-v[1], v[0], 0]])
-    rotation = numpy.identity(3) + vx + numpy.dot(vx, vx) * 1 / (1 + numpy.linalg.norm(a * b))
-    # In this case, it assumes that the referenced normal direction is the z direction.
-    # It would be better if using x direction cause the euler rotations are applied by order x, y, z.
-    # The rotation along normal direction is related to image feature matching (z direction in this case.)
-    # However, since it is the last one having effect, it also changes the x y rotation values.
 
-    # euler = Rotation.from_dcm(rotation).as_euler("xyz")
-    # r_z = Rotation.from_euler("xyz", [0, 0, -euler[2]]).as_dcm()
-    # rotation = numpy.dot(rotation, r_z)
-    euler = Rotation.from_dcm(rotation).as_euler("zxy")
-    rotation = Rotation.from_euler("zxy", [0, euler[1], euler[2]]).as_dcm()
+def rotation_matrix(normal):
+    a = numpy.asarray(normal)
+    [x, y, z] = (a / numpy.linalg.norm(a)).tolist()
+    projected_xy = x*x + y*y
+    if projected_xy != 0:
+        rot_x = math.acos(z)
+        rot_z = math.asin(x / math.sqrt(projected_xy))
+        if y < 0:
+            rot_z = math.pi - rot_z
+        [n_z, n_x, n_y] = Rotation.from_euler("xzy", [-rot_x, -rot_z, 0]).as_euler("zxy")
+        rotation = Rotation.from_euler("zxy", [0, n_x, n_y]).as_dcm()
+    else:
+        if z >= 0:
+            rotation = numpy.identity(3)
+        else:
+            rotation = Rotation.from_euler("zxy", [0, math.pi, 0]).as_dcm()
     return rotation
 
 

@@ -3,6 +3,6 @@ import time
 import threading
 
 view = robotic_visualizer.RoboticVisualizer()
-view.read_robotic_arm_pose_list("testing_pose.testingjson")
+view.read_robotic_arm_pose_list("testing_pose_2.testingjson")
 #     view.update_visualizer()
 view.run()
