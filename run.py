@@ -125,6 +125,7 @@ if __name__ == "__main__":
                 tile_info_dict_all = read_tile_info_dict(join(config["path_data"], config["tile_info_dict_all_name"]))
             except:
                 tile_info_dict_all = make_tile_info_dict_all(config)
+                save_tile_info_dict(join(config["path_data"], config["tile_info_dict_all_name"]), tile_info_dict_all)
             tile_info_dict = make_info_dict(tile_info_dict_all, config)
         save_tile_info_dict(join(config["path_data"], config["tile_info_dict_name"]), tile_info_dict)
 
@@ -146,7 +147,7 @@ if __name__ == "__main__":
                 print("No trans_data available in default path. Start updating")
                 trans_data_manager.update_local_trans_data_multiprocessing()
                 trans_data_manager.save(join(config["path_data"], config["local_trans_dict_name"]))
-            tile_info_dict = trans_data_manager.update_tile_info_dict_confirmed_loop_closure()
+                tile_info_dict = trans_data_manager.update_tile_info_dict_confirmed_loop_closure()
         else:
             print("No tile_info_dict available in RAM")
             sys.exit()
@@ -184,6 +185,6 @@ if __name__ == "__main__":
 
     # Visualize ==================================================================================
     if args.vpg_raw:
-        viewer = visualization.MicroscopyReconstructionVisualizerOpen3d( tile_info_dict, config)
+        viewer = visualization.MicroscopyReconstructionVisualizerOpen3d(tile_info_dict, config)
         viewer.visualize_config()
 
