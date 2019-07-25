@@ -132,9 +132,9 @@ def make_tile_info_dict_all(config):
         tile_info.pose_matrix = tile_info.init_transform_matrix
         tile_info_dict_all[tile_info.tile_index] = tile_info
         # ===========================================================================================
-        # if tile_info.laplacian < 1000:
-        #     tile_blur += 1
-        #     print("Blur: %05d" % tile_info.tile_index)
+        if tile_info.laplacian < config["laplacian_threshold"]:
+            tile_blur += 1
+            print("Blur: %05d. Total blurs: %d out of %d" % (tile_info.tile_index, tile_blur, len(tile_info_file_list)))
 
     print("%d tiles out of %d in total are blurred" % (tile_blur, len(tile_info_dict_all)))
 
@@ -189,8 +189,8 @@ def make_info_dict(tile_info_dict_all, config):
     # Actually, this might not be the best way of choosing key frames. Down sampling makes the key
     # frames far away from each other.
 
-    # tile_info_point_cloud, tile_tree, tile_index_list = \
-    #     tile_info_dict_generate_kd_tree(tile_info_dict_subsample)
+    tile_info_point_cloud, tile_tree, tile_index_list = \
+        tile_info_dict_generate_kd_tree(tile_info_dict_subsample)
     # pcd_down, index_in_pcd =\
     #     geometry.voxel_down_sample_and_trace(input=tile_info_point_cloud,
     #                                          voxel_size=config["keyframe_voxel_size"],
