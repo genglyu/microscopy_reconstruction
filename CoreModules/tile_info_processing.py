@@ -188,18 +188,23 @@ def make_info_dict(tile_info_dict_all, config):
     # Set key frames. ===============================================================================
     # Actually, this might not be the best way of choosing key frames. Down sampling makes the key
     # frames far away from each other.
-    tile_info_point_cloud, tile_tree, tile_index_list = \
-        tile_info_dict_generate_kd_tree(tile_info_dict_subsample)
-    pcd_down, index_in_pcd =\
-        geometry.voxel_down_sample_and_trace(input=tile_info_point_cloud,
-                                             voxel_size=config["keyframe_voxel_size"],
-                                             min_bound=numpy.asarray(config["keyframe_min_bound_T"]).T,
-                                             max_bound=numpy.asarray(config["keyframe_max_bound_T"]).T,
-                                             approximate_class=False)
-    index_list = index_in_pcd.reshape(-1)
-    index_list = numpy.sort(index_list[index_list >= 0]).tolist()
-    for index in index_list:
-        tile_info_dict_subsample[tile_index_list[index]].is_keyframe = True
+
+    # tile_info_point_cloud, tile_tree, tile_index_list = \
+    #     tile_info_dict_generate_kd_tree(tile_info_dict_subsample)
+    # pcd_down, index_in_pcd =\
+    #     geometry.voxel_down_sample_and_trace(input=tile_info_point_cloud,
+    #                                          voxel_size=config["keyframe_voxel_size"],
+    #                                          min_bound=numpy.asarray(config["keyframe_min_bound_T"]).T,
+    #                                          max_bound=numpy.asarray(config["keyframe_max_bound_T"]).T,
+    #                                          approximate_class=False)
+    # index_list = index_in_pcd.reshape(-1)
+    # index_list = numpy.sort(index_list[index_list >= 0]).tolist()
+    # for index in index_list:
+    #     tile_info_dict_subsample[tile_index_list[index]].is_keyframe = True
+
+    for j, tile_info_key in enumerate(tile_info_dict_subsample):
+        if j % config["n_keyframes_per_n_frame"] == 0:
+            tile_info_dict_subsample[tile_info_key].is_keyframe = True
 
     # Generate potential neighbours. ================================================================
     for k, tile_info_key in enumerate(tile_info_dict_subsample):
