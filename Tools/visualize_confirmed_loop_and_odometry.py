@@ -1,6 +1,7 @@
 import numpy
 import open3d
 import sys
+
 sys.path.append("../Utility")
 sys.path.append("../CoreModules")
 import argparse
@@ -49,7 +50,9 @@ for tile_info_key in tile_info_dict:
                                                              cv_scale_factor=-1.0,
                                                              color_filter=[1.0, 1.0, 2.0])
 
-        trans_s_t = numpy.linalg.inv(trans_data_manager.get_trans(tile_info_key, confirmed_tile_key))
+        trans_data = trans_data_manager.get_trans(tile_info_key, confirmed_tile_key)
+
+        trans_s_t = numpy.linalg.inv(trans_data.trans)
         trans_t = numpy.dot(tile_info.init_transform_matrix, trans_s_t)
 
         loop_t_pcd.transform(trans_t)
@@ -60,4 +63,19 @@ for tile_info_key in tile_info_dict:
                                             color=[0.0, 0.0, 1.0])
         loop_t_wire_frame.transform(loop_tile_info.init_transform_matrix)
 
-        open3d.draw_geometries([s_pcd, loop_t_pcd, loop_t_wire_frame])
+
+        normal_loop_init = numpy.dot(loop_tile_info.init_transform_matrix, numpy.array([0, 0, 1, 0]).T).T[0:3]
+        normal_loop = numpy.dot(trans_t, numpy.array([0, 0, 1, 0]).T).T[0:3]
+
+        print("===============================================")
+        print("Confirmed loops between %6d and %6d with conf %4f" % (tile_info_key, confirmed_tile_key,
+                                                                     trans_data.conf))
+        # print("confidence: %4f" % trans_data.conf)
+        print("normal_loop_init: ")
+        print(normal_loop_init)
+        print("normal_loop:")
+        print(normal_loop)
+
+
+
+        draw_geometries([s_pcd, loop_t_pcd, loop_t_wire_frame])
