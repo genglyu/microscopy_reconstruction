@@ -8,6 +8,43 @@ from tile_info_processing import *
 from image_processing import *
 
 
+# ======================================================================================================================
+# openCV involved in these two functions.
+def make_full_image_pcd_list_pose(tile_info_dict, downsample_factor=-1.0, color_filter=[1.0, 1.0, 1.0]):
+    pcd_list = []
+    for tile_info_key in tile_info_dict:
+        tile_info = tile_info_dict[tile_info_key]
+        img = cv2.imread(tile_info.image_path)
+        pcd = load_image_as_planar_point_cloud_open3d(image_bgr=img,
+                                                      width_by_mm=tile_info.width_by_mm,
+                                                      height_by_mm=tile_info.height_by_mm,
+                                                      cv_scale_factor=downsample_factor,
+                                                      color_filter=color_filter)
+        pcd.transform(tile_info.pose_matrix)
+        pcd_list.append(pcd)
+    return pcd_list
+
+
+def make_full_image_pcd_list_sensor(tile_info_dict, downsample_factor=-1.0, color_filter=[1.0, 1.0, 1.0]):
+    pcd_list = []
+    for tile_info_key in tile_info_dict:
+        tile_info = tile_info_dict[tile_info_key]
+        img = cv2.imread(tile_info.image_path)
+        pcd = load_image_as_planar_point_cloud_open3d(image_bgr=img,
+                                                      width_by_mm=tile_info.width_by_mm,
+                                                      height_by_mm=tile_info.height_by_mm,
+                                                      cv_scale_factor=downsample_factor,
+                                                      color_filter=color_filter)
+        pcd.transform(tile_info.init_transform_matrix)
+        pcd_list.append(pcd)
+    return pcd_list
+# ======================================================================================================================
+
+# ======================================================================================================================
+# For functions below, only open3d is used for visualization
+# ======================================================================================================================
+
+
 def make_connection_of_pcd_order(pcd, color=[0, 0, 0]):
     connection = LineSet()
     connection.points = pcd.points
@@ -52,37 +89,6 @@ def make_pose_sensor_edge_set(tile_info_dict, color=[0.0, 0.0, 0.0]):
         edges.append([i*2, i*2+1])
     edge_set = make_edge_set(points, edges, color)
     return edge_set
-
-
-def make_full_image_pcd_list_pose(tile_info_dict, downsample_factor=-1.0, color_filter=[1.0, 1.0, 1.0]):
-    pcd_list = []
-    for tile_info_key in tile_info_dict:
-        tile_info = tile_info_dict[tile_info_key]
-        img = cv2.imread(tile_info.image_path)
-        pcd = load_image_as_planar_point_cloud_open3d(image_bgr=img,
-                                                      width_by_mm=tile_info.width_by_mm,
-                                                      height_by_mm=tile_info.height_by_mm,
-                                                      cv_scale_factor=downsample_factor,
-                                                      color_filter=color_filter)
-        pcd.transform(tile_info.pose_matrix)
-        pcd_list.append(pcd)
-    return pcd_list
-
-
-def make_full_image_pcd_list_sensor(tile_info_dict, downsample_factor=-1.0, color_filter=[1.0, 1.0, 1.0]):
-    pcd_list = []
-    for tile_info_key in tile_info_dict:
-        tile_info = tile_info_dict[tile_info_key]
-        img = cv2.imread(tile_info.image_path)
-        pcd = load_image_as_planar_point_cloud_open3d(image_bgr=img,
-                                                      width_by_mm=tile_info.width_by_mm,
-                                                      height_by_mm=tile_info.height_by_mm,
-                                                      cv_scale_factor=downsample_factor,
-                                                      color_filter=color_filter)
-        pcd.transform(tile_info.init_transform_matrix)
-        pcd_list.append(pcd)
-    return pcd_list
-# ========================================================================================
 
 
 def make_key_frame_wireframes_pose(tile_info_dict, color=[0.0, 0.0, 0.0]):
@@ -138,7 +144,8 @@ def make_regular_frame_wireframes_sensor(tile_info_dict, color=[0.0, 0.0, 0.0]):
 # =======================================================================================
 
 
-def make_tile_frame(trans_matrix, width_by_mm, height_by_mm, color=[0.5, 0.5, 0.5]):
+def make_tile_frame(trans_matrix=numpy.identity(4),
+                    width_by_mm=4.0, height_by_mm=3.0, color=[0.5, 0.5, 0.5]):
     tile_frame = LineSet()
     lb_rb_rt_lt = [[-width_by_mm / 2, -height_by_mm / 2, 0],
                    [ width_by_mm / 2, -height_by_mm / 2, 0],

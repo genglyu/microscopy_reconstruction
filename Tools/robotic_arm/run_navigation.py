@@ -17,16 +17,17 @@ points = pose_convert.robotic_pose_list_to_points(robotic_pose_list)
 
 navigator = navigation.NavigationGraph()
 navigator.load_point_list(points, 0.03)
-order = navigator.dfs()
-# order = navigator.bfs(2)
-#
-#
+# order = navigator.dfs()
+order = navigator.bfs(2)
+
+
 points = pose_convert.adjust_order(points, order)
 robotic_pose_list = pose_convert.adjust_order(robotic_pose_list, order)
 
 pose_convert.save_robotic_pose("ordered.testingjson", robotic_pose_list)
 
 pcd_original = visualization.make_point_cloud(points_original, color=[1, 0, 0])
+
 pcd = visualization.make_point_cloud(points)
 route = visualization.make_connection_of_pcd_order(pcd)
 
