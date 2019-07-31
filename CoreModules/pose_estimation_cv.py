@@ -263,6 +263,14 @@ def transformation_cv(s_img, t_img, crop_w=0, crop_h=0,
     return match_conf, trans_cv
 
 
+# ===========================================================================================================
+# ===========================================================================================================
+# ===========================================================================================================
+# There are different versions of function transform_convert_from_2d_to_3d(), transform_planar_add_normal_direction()
+# and trans_local_check()
+# ===========================================================================================================
+# Version 1: initial pose use x+ as normal direction
+# ===========================================================================================================
 def transform_convert_from_2d_to_3d(trans_cv_2d,
                                     width_by_pixel_s=320, height_by_pixel_s=240,
                                     width_by_mm_s=3.2, height_by_mm_s=1.6,
@@ -275,26 +283,31 @@ def transform_convert_from_2d_to_3d(trans_cv_2d,
     trans_compensate_x = width_by_mm_t / width_by_pixel_t
     trans_compensate_y = height_by_mm_t / height_by_pixel_t
 
-    compensate_factors = numpy.asarray([[scaling_compensate_x, scaling_compensate_y, 0, trans_compensate_x],
-                                        [scaling_compensate_x, scaling_compensate_y, 0, trans_compensate_y],
-                                        [                   0,                    0, 1,                  0],
-                                        [                   0,                    0, 0,                  1]])
+    # compensate_factors = numpy.asarray([[scaling_compensate_x, scaling_compensate_y, 0, trans_compensate_x],
+    #                                     [scaling_compensate_x, scaling_compensate_y, 0, trans_compensate_y],
+    #                                     [                   0,                    0, 1,                  0],
+    #                                     [                   0,                    0, 0,                  1]])
 
-    trans_cv_four = numpy.asarray([[ trans_cv_2d[0][0], -trans_cv_2d[0][1], 0,  trans_cv_2d[0][2]],
-                                   [-trans_cv_2d[1][0],  trans_cv_2d[1][1], 0,  -trans_cv_2d[1][2]],
-                                   [              0,               0, 1,               0],
-                                   [              0,               0, 0,               1]])
+    compensate_factors = numpy.asarray([[1, 0, 0, 0],
+                                        [0, scaling_compensate_x, scaling_compensate_y, trans_compensate_x],
+                                        [0, scaling_compensate_x, scaling_compensate_y, trans_compensate_y],
+                                        [0, 0, 0, 1]])
+
+    trans_cv_four = numpy.asarray([[1, 0, 0, 0],
+                                   [0, trans_cv_2d[0][0], -trans_cv_2d[0][1], trans_cv_2d[0][2]],
+                                   [0, -trans_cv_2d[1][0], trans_cv_2d[1][1], -trans_cv_2d[1][2]],
+                                   [0, 0, 0, 1]])
     trans_cv_3d = trans_cv_four * compensate_factors
 
     # (ct, cr, cz, cs) = transforms3d.affines.decompose44(trans_cv_four)
 
-    trans_deoffset = [[1, 0, 0, -width_by_mm_t/2],
-                     [0, 1, 0, height_by_mm_t/2],
-                     [0, 0, 1, 0],
+    trans_deoffset = [[1, 0, 0, 0],
+                     [0, 1, 0, -width_by_mm_t/2],
+                     [0, 0, 1, height_by_mm_t/2],
                      [0, 0, 0, 1]]
-    trans_offset = [[1, 0, 0, width_by_mm_s/2],
-                    [0, 1, 0, -height_by_mm_s/2],
-                    [0, 0, 1, 0],
+    trans_offset = [[1, 0, 0, 0],
+                    [0, 1, 0, width_by_mm_s/2],
+                    [0, 0, 1, -height_by_mm_s/2],
                     [0, 0, 0, 1]]
 
     trans_planar_3d = numpy.dot(numpy.dot(trans_deoffset, trans_cv_3d), trans_offset)
@@ -310,13 +323,114 @@ def transform_planar_add_normal_direction(trans_planar, trans_s, trans_t):
     rr_euler = Rotation.from_dcm(rr).as_euler("xyz")  # should have x and y value.
     # trans_one = transforms3d.affines.compose(pt / 2, pr, pz, ps)
     trans_one = transforms3d.affines.compose(pt / 2, pr, [1, 1, 1])
+
+    print("rr_euler")
+    print(rr_euler)
+
     trans_two = transforms3d.affines.compose([0, 0, 0],
-                                             Rotation.from_euler("xyz", [rr_euler[0], rr_euler[1], 0]).as_dcm(),
+                                             Rotation.from_euler("xyz", [0, rr_euler[1], rr_euler[2]]).as_dcm(),
                                              [1, 1, 1])
+
     trans_three = transforms3d.affines.compose(pt / 2, numpy.identity(3), [1, 1, 1])
     trans_with_normal_direction = numpy.dot(numpy.dot(trans_three, trans_two), trans_one)
 
     return trans_with_normal_direction
+
+
+def trans_local_check(trans_local, s_init_trans, t_init_trans, scaling_tolerance=0.05, rotation_tolerance=0.2):
+    trans_diff = numpy.dot(
+        numpy.linalg.inv(numpy.dot(s_init_trans, numpy.linalg.inv(t_init_trans))), trans_local)
+
+    (pt, pr, pz, ps) = transforms3d.affines.decompose44(trans_diff)
+    rotation_euler_x = Rotation.from_dcm(pr).as_euler("xyz")[0]
+
+    if abs(pz[0] - 1) > scaling_tolerance \
+            or abs(pz[1] - 1) > scaling_tolerance \
+            or abs(pz[2] - 1) > scaling_tolerance:
+        print("pz: %3f, %3f, %3f" % (pz[0], pz[1], pz[2]))
+        print(trans_diff)
+        return False
+    if abs(rotation_euler_x) > rotation_tolerance:
+        print("rotation_euler_x: %3f" % rotation_euler_x)
+        print(trans_diff)
+        return False
+    return True
+# ===========================================================================================================
+# Version 2: initial pose use z+ as normal direction
+# ===========================================================================================================
+# def transform_convert_from_2d_to_3d(trans_cv_2d,
+#                                     width_by_pixel_s=320, height_by_pixel_s=240,
+#                                     width_by_mm_s=3.2, height_by_mm_s=1.6,
+#                                     width_by_pixel_t=640, height_by_pixel_t=480,
+#                                     width_by_mm_t=6.4, height_by_mm_t=4.8):
+#
+#     scaling_compensate_x = (width_by_mm_t / width_by_pixel_t) / (width_by_mm_s / width_by_pixel_s)
+#     scaling_compensate_y = (height_by_mm_t / height_by_pixel_t) / (height_by_mm_s / height_by_pixel_s)
+#
+#     trans_compensate_x = width_by_mm_t / width_by_pixel_t
+#     trans_compensate_y = height_by_mm_t / height_by_pixel_t
+#
+#     compensate_factors = numpy.asarray([[scaling_compensate_x, scaling_compensate_y, 0, trans_compensate_x],
+#                                         [scaling_compensate_x, scaling_compensate_y, 0, trans_compensate_y],
+#                                         [                   0,                    0, 1,                  0],
+#                                         [                   0,                    0, 0,                  1]])
+#
+#     trans_cv_four = numpy.asarray([[ trans_cv_2d[0][0], -trans_cv_2d[0][1], 0,  trans_cv_2d[0][2]],
+#                                    [-trans_cv_2d[1][0],  trans_cv_2d[1][1], 0,  -trans_cv_2d[1][2]],
+#                                    [              0,               0, 1,               0],
+#                                    [              0,               0, 0,               1]])
+#     trans_cv_3d = trans_cv_four * compensate_factors
+#
+#     # (ct, cr, cz, cs) = transforms3d.affines.decompose44(trans_cv_four)
+#
+#     trans_deoffset = [[1, 0, 0, -width_by_mm_t/2],
+#                      [0, 1, 0, height_by_mm_t/2],
+#                      [0, 0, 1, 0],
+#                      [0, 0, 0, 1]]
+#     trans_offset = [[1, 0, 0, width_by_mm_s/2],
+#                     [0, 1, 0, -height_by_mm_s/2],
+#                     [0, 0, 1, 0],
+#                     [0, 0, 0, 1]]
+#
+#     trans_planar_3d = numpy.dot(numpy.dot(trans_deoffset, trans_cv_3d), trans_offset)
+#     return trans_planar_3d
+#
+#
+# def transform_planar_add_normal_direction(trans_planar, trans_s, trans_t):
+#     trans_rotation = numpy.dot(numpy.linalg.inv(trans_t), trans_s)
+#
+#     (pt, pr, pz, ps) = transforms3d.affines.decompose44(trans_planar)
+#     (rt, rr, rz, rs) = transforms3d.affines.decompose44(trans_rotation)
+#
+#     rr_euler = Rotation.from_dcm(rr).as_euler("xyz")  # should have x and y value.
+#     # trans_one = transforms3d.affines.compose(pt / 2, pr, pz, ps)
+#     trans_one = transforms3d.affines.compose(pt / 2, pr, [1, 1, 1])
+#     trans_two = transforms3d.affines.compose([0, 0, 0],
+#                                              Rotation.from_euler("xyz", [rr_euler[0], rr_euler[1], 0]).as_dcm(),
+#                                              [1, 1, 1])
+#     trans_three = transforms3d.affines.compose(pt / 2, numpy.identity(3), [1, 1, 1])
+#     trans_with_normal_direction = numpy.dot(numpy.dot(trans_three, trans_two), trans_one)
+#
+#     return trans_with_normal_direction
+#
+#
+# def trans_local_check(trans_local, s_init_trans, t_init_trans, scaling_tolerance=0.05, rotation_tolerance=0.2):
+#     trans_diff = numpy.dot(
+#         numpy.linalg.inv(numpy.dot(s_init_trans, numpy.linalg.inv(t_init_trans))), trans_local)
+#
+#     (pt, pr, pz, ps) = transforms3d.affines.decompose44(trans_diff)
+#     rotation_euler_z = Rotation.from_dcm(pr).as_euler("xyz")[2]
+#
+#     if abs(pz[0] - 1) > scaling_tolerance \
+#             or abs(pz[1] - 1) > scaling_tolerance \
+#             or abs(pz[2] - 1) > scaling_tolerance:
+#         return False
+#     if abs(rotation_euler_z) > rotation_tolerance:
+#         return False
+#     return True
+# =================================================================================================================
+# =================================================================================================================
+# =================================================================================================================
 
 
 # def trans_local_check_tile(trans_local, s_info, t_info, scaling_tolerance=0.05, rotation_tolerance=0.2):
@@ -338,22 +452,6 @@ def transform_planar_add_normal_direction(trans_planar, trans_s, trans_t):
 #               % (s_info.tile_index, t_info.tile_index, rotation_euler_z))
 #         return False
 #     return True
-
-
-def trans_local_check(trans_local, s_init_trans, t_init_trans, scaling_tolerance=0.05, rotation_tolerance=0.2):
-    trans_diff = numpy.dot(
-        numpy.linalg.inv(numpy.dot(s_init_trans, numpy.linalg.inv(t_init_trans))), trans_local)
-
-    (pt, pr, pz, ps) = transforms3d.affines.decompose44(trans_diff)
-    rotation_euler_z = Rotation.from_dcm(pr).as_euler("xyz")[2]
-
-    if abs(pz[0] - 1) > scaling_tolerance \
-            or abs(pz[1] - 1) > scaling_tolerance \
-            or abs(pz[2] - 1) > scaling_tolerance:
-        return False
-    if abs(rotation_euler_z) > rotation_tolerance:
-        return False
-    return True
 
 
 def trans_info_matching_g2o(match_conf, weight=1, match_info_g2o=numpy.identity(4)):

@@ -28,18 +28,37 @@ def load_image_as_planar_point_cloud_open3d(image_bgr, width_by_mm, height_by_mm
                                                 convert_to_indensity=convert_to_indensity)
     (height_by_pixel, width_by_pixel, value_length) = img_numpy_array.shape
 
+    # ================================================================================================
+    # Parts that decides the initial pose of the tile.
+
+    # Normal direction: x+ direction. uv -> yz. Up and right defined as positive.
+    # Different from the coordinates of image pixels but suitable for visualization.
     pixel_amount = height_by_pixel * width_by_pixel
     points_position = numpy.mgrid[(height_by_pixel / 2):(-height_by_pixel + height_by_pixel / 2):-1,
                       (-width_by_pixel / 2):(width_by_pixel - width_by_pixel / 2):1].reshape(2, -1).T
-    # ================================================================================================
     points_position = numpy.c_[
+        numpy.zeros(pixel_amount),
         points_position[:, 1] * width_by_mm / width_by_pixel,
-        points_position[:, 0] * height_by_mm / height_by_pixel,
-        numpy.zeros(pixel_amount)
+        points_position[:, 0] * height_by_mm / height_by_pixel
     ]
 
     points_normal = numpy.c_[
-        numpy.zeros(pixel_amount), numpy.zeros(pixel_amount), numpy.ones(pixel_amount)]
+        numpy.ones(pixel_amount), numpy.zeros(pixel_amount), numpy.zeros(pixel_amount)]
+    # # ================================================================================================
+    # # Normal direction: z+ direction. uv -> xy. Up and right defined as positive.
+    # pixel_amount = height_by_pixel * width_by_pixel
+    # points_position = numpy.mgrid[(height_by_pixel / 2):(-height_by_pixel + height_by_pixel / 2):-1,
+    #                   (-width_by_pixel / 2):(width_by_pixel - width_by_pixel / 2):1].reshape(2, -1).T
+    # points_position = numpy.c_[
+    #     points_position[:, 1] * width_by_mm / width_by_pixel,
+    #     points_position[:, 0] * height_by_mm / height_by_pixel,
+    #     numpy.zeros(pixel_amount)
+    # ]
+    #
+    # points_normal = numpy.c_[
+    #     numpy.zeros(pixel_amount), numpy.zeros(pixel_amount), numpy.ones(pixel_amount)]
+    # ================================================================================================
+
     points_color = img_numpy_array.reshape(-1, 3)
     points_color = points_color * (numpy.asarray(color_filter) / 255.0)
 

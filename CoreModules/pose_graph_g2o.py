@@ -87,7 +87,7 @@ class PoseGraphOptimizerG2o(g2o.SparseOptimizer):
                 success, conf, trans = \
                     trans_data_manager.get_trans_extend(s_id=tile_info.tile_index, t_id=odometry_t)
                 if success:
-                    self.add_odometry_edge(s_id= tile_info.tile_index, t_id=odometry_t,
+                    self.add_odometry_edge(s_id=tile_info.tile_index, t_id=odometry_t,
                                            trans=trans,
                                            info=trans_info_matching_g2o(conf, config["odometry_info_weight"],
                                                                         numpy.asarray(config["match_info_g2o"])))

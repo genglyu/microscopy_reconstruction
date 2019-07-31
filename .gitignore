@@ -7,3 +7,5 @@
 cmake-build-*/
 DebugTools/random_testing/
 *.testingjson
+*.png
+*.jpeg

@@ -147,10 +147,10 @@ def make_regular_frame_wireframes_sensor(tile_info_dict, color=[0.0, 0.0, 0.0]):
 def make_tile_frame(trans_matrix=numpy.identity(4),
                     width_by_mm=4.0, height_by_mm=3.0, color=[0.5, 0.5, 0.5]):
     tile_frame = LineSet()
-    lb_rb_rt_lt = [[-width_by_mm / 2, -height_by_mm / 2, 0],
-                   [ width_by_mm / 2, -height_by_mm / 2, 0],
-                   [ width_by_mm / 2,  height_by_mm / 2, 0],
-                   [-width_by_mm / 2,  height_by_mm / 2, 0]
+    lb_rb_rt_lt = [[0, -width_by_mm / 2, -height_by_mm / 2],
+                   [0,  width_by_mm / 2, -height_by_mm / 2],
+                   [0,  width_by_mm / 2,  height_by_mm / 2],
+                   [0, -width_by_mm / 2,  height_by_mm / 2]
                    ]
     lines = [[0, 1], [1, 2], [2, 3], [3, 0]]
     colors = [color, color, color, color]
@@ -172,14 +172,14 @@ def generate_pose_points_and_normals(tile_info_dict, is_key_frame=None):
             points_and_normals["points"].append(numpy.dot(tile_info_dict[tile_info_key].pose_matrix,
                                                           numpy.asarray([0, 0, 0, 1]).T).T[0:3])
             points_and_normals["normals"].append(numpy.dot(tile_info_dict[tile_info_key].pose_matrix,
-                                                           numpy.asarray([0, 0, 1, 0]).T).T[0:3])
+                                                           numpy.asarray([1, 0, 0, 0]).T).T[0:3])
     else:
         for tile_info_key in tile_info_dict:
             if tile_info_dict[tile_info_key].is_keyframe == is_key_frame:
                 points_and_normals["points"].append(numpy.dot(tile_info_dict[tile_info_key].pose_matrix,
                                                               numpy.asarray([0, 0, 0, 1]).T).T[0:3])
                 points_and_normals["normals"].append(numpy.dot(tile_info_dict[tile_info_key].pose_matrix,
-                                                              numpy.asarray([0, 0, 1, 0]).T).T[0:3])
+                                                              numpy.asarray([1, 0, 0, 0]).T).T[0:3])
     return points_and_normals
 
 
@@ -192,14 +192,14 @@ def generate_sensor_points_and_normals(tile_info_dict, is_key_frame=None):
             points_and_normals["points"].append(numpy.dot(tile_info_dict[tile_info_key].init_transform_matrix,
                                                           numpy.asarray([0, 0, 0, 1]).T).T[0:3])
             points_and_normals["normals"].append(numpy.dot(tile_info_dict[tile_info_key].init_transform_matrix,
-                                                           numpy.asarray([0, 0, 1, 0]).T).T[0:3])
+                                                           numpy.asarray([1, 0, 0, 0]).T).T[0:3])
     else:
         for tile_info_key in tile_info_dict:
             if tile_info_dict[tile_info_key].is_keyframe == is_key_frame:
                 points_and_normals["points"].append(numpy.dot(tile_info_dict[tile_info_key].init_transform_matrix,
                                                               numpy.asarray([0, 0, 0, 1]).T).T[0:3])
                 points_and_normals["normals"].append(numpy.dot(tile_info_dict[tile_info_key].init_transform_matrix,
-                                                               numpy.asarray([0, 0, 1, 0]).T).T[0:3])
+                                                               numpy.asarray([1, 0, 0, 0]).T).T[0:3])
     return points_and_normals
 
 

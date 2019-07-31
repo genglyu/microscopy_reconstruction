@@ -58,6 +58,17 @@ def tile_generate_init_transform_matrix(position, rotation, scale=[1, 1, 1]):  #
     translation = position
     rotation_matrix = Rotation.from_quat(rotation).as_dcm()
     init_transform_matrix = transforms3d.affines.compose(translation, rotation_matrix, scale)
+    # Because of using x+ as normal direction in file image_processing.py, a rotation needs to be added.
+    # plane_shifting_rotation_trans = \
+    #     transforms3d.affines.compose(T=[0, 0, 0],
+    #                                  R=Rotation.from_euler("xyz", [0, -math.pi/2, -math.pi/2]).as_dcm(),
+    #                                  Z=[1, 1, 1])
+    plane_shifting_rotation_trans = numpy.array([[0, 1, 0, 0],
+                                                 [0, 0, 1, 0],
+                                                 [1, 0, 0, 0],
+                                                 [0, 0, 0, 1]])
+    init_transform_matrix = numpy.dot(init_transform_matrix, plane_shifting_rotation_trans)
+    # =============================================================================================
     return init_transform_matrix
 
 
@@ -126,9 +137,14 @@ def make_tile_info_dict_all(config):
         tile_info.init_transform_matrix = tile_generate_init_transform_matrix(tile_info.position, tile_info.rotation)
 
         # camera offset calibration. Might need to be adjusted in the future.========================
-        tile_info.init_transform_matrix = numpy.dot(
-            numpy.dot(camera_offset_matrix_inv, tile_info.init_transform_matrix),
-            camera_offset_matrix)
+        # current matrix is generated for normal direction == z+. Might not suit for other situation.
+
+        # tile_info.init_transform_matrix = numpy.dot(
+        #     numpy.dot(camera_offset_matrix_inv, tile_info.init_transform_matrix),
+        #     camera_offset_matrix)
+
+        # ===========================================================================================
+
         tile_info.pose_matrix = tile_info.init_transform_matrix
         tile_info_dict_all[tile_info.tile_index] = tile_info
         # ===========================================================================================
@@ -167,6 +183,7 @@ def make_info_dict(tile_info_dict_all, config):
                 tile_info_dict_subsample[tile_info_key] = tile_info
 
     # Recenter the pos and rotation with references ================================================
+    # To simplify, use the first tile as reference.
     reference_trans_matrix_inv = numpy.identity(4)
 
     for j, tile_info_key in enumerate(tile_info_dict_subsample):

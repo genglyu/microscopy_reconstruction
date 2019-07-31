@@ -57,15 +57,19 @@ for tile_info_key in tile_info_dict:
 
         loop_t_pcd.transform(trans_t)
 
-        loop_t_wire_frame = make_tile_frame(trans_matrix=trans_t,
+        loop_t_wire_frame = make_tile_frame(trans_matrix=loop_tile_info.init_transform_matrix,
                                             width_by_mm=loop_tile_info.width_by_mm,
                                             height_by_mm=loop_tile_info.height_by_mm,
                                             color=[0.0, 0.0, 1.0])
-        loop_t_wire_frame.transform(loop_tile_info.init_transform_matrix)
+        s_wire_frame = make_tile_frame(trans_matrix=tile_info.init_transform_matrix,
+                                       width_by_mm=tile_info.width_by_mm,
+                                       height_by_mm=tile_info.height_by_mm,
+                                       color=[1.0, 0.0, 0.0])
 
 
-        normal_loop_init = numpy.dot(loop_tile_info.init_transform_matrix, numpy.array([0, 0, 1, 0]).T).T[0:3]
-        normal_loop = numpy.dot(trans_t, numpy.array([0, 0, 1, 0]).T).T[0:3]
+
+        normal_loop_init = numpy.dot(loop_tile_info.init_transform_matrix, numpy.array([1, 0, 0, 0]).T).T[0:3]
+        normal_loop = numpy.dot(trans_t, numpy.array([1, 0, 0, 0]).T).T[0:3]
 
         print("===============================================")
         print("Confirmed loops between %6d and %6d with conf %4f" % (tile_info_key, confirmed_tile_key,
@@ -78,4 +82,4 @@ for tile_info_key in tile_info_dict:
 
 
 
-        draw_geometries([s_pcd, loop_t_pcd, loop_t_wire_frame])
+        draw_geometries([s_wire_frame, s_pcd, loop_t_pcd, loop_t_wire_frame])
