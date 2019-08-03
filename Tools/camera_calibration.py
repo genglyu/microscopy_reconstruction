@@ -12,7 +12,7 @@ sys.path.append("./Utility")
 sys.path.append("./CoreFunctionModules")
 sys.path.append("./EvaluationAndCalibration")
 from pose_estimation_cv_icp import *
-from file import *
+from file_managing import *
 sys.path.append(".")
 from initialize_config import *
 from tile_info_preprocessing import *

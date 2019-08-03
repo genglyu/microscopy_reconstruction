@@ -5,7 +5,7 @@
 # examples/Python/Utility/file.py
 
 from os import listdir, makedirs
-from os.path import exists, isfile, join, splitext
+from os.path import exists, isfile, isdir, join, splitext
 import shutil
 import re
 

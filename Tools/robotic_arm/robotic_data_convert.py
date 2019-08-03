@@ -2,10 +2,15 @@ import numpy
 import transforms3d
 import json
 import open3d
+import file_managing
+import os.path
 from scipy.spatial.transform import Rotation
 
-
-trans_rob_to_camera = transforms3d.affines.compose([0, 0, 0], Rotation.from_euler("xyz", [0, 0, 0]).as_dcm(), [1, 1, 1])
+trans_rob_to_camera = transforms3d.affines.compose(T=[0, 0, 0],
+                                                   R=[[-1, 0, 0],
+                                                      [0, -1, 0],
+                                                      [0, 0, -1]],
+                                                   Z=[1, 1, 1])
 trans_camera_to_rob = numpy.linalg.inv(trans_rob_to_camera)
 
 
@@ -17,11 +22,7 @@ def trans_to_rob_pose(trans):
     return numpy.dot(numpy.asarray(trans), trans_camera_to_rob).T.reshape((-1)).tolist()
 
 
-
-
-
-
-def read_robotic_pose_as_trans(path, exclude_beginning_n=0):
+def read_robotic_pose_list_as_trans_list(path, exclude_beginning_n=0):
     robotic_pose_list = json.load(open(path, "r"))
     trans_list = []
     for i, pose in enumerate(robotic_pose_list):
@@ -30,18 +31,48 @@ def read_robotic_pose_as_trans(path, exclude_beginning_n=0):
     return trans_list
 
 
-def read_robotic_pose(path, exclude_beginning_n=0):
+def read_robotic_pose_list(path, exclude_beginning_n=0):
     robotic_pose_list = json.load(open(path, "r"))
     robotic_pose_list = robotic_pose_list[exclude_beginning_n:]
     return robotic_pose_list
 
 
+def read_trans_list(path, exclude_beginning_n=0):
+    trans_data_list = json.load(open(path, "r"))
+    trans_list = []
+    for i, trans_data in enumerate(trans_data_list):
+        if i >= exclude_beginning_n:
+            trans_list.append(numpy.asarray(trans_data))
+    return trans_list
 
 
+def make_robotic_pose_list(robotic_pose_dir_path):
+    # Read all pose files from the directory.
+    if os.path.isdir(robotic_pose_dir_path):
+        pose_file_list = file_managing.get_file_list(robotic_pose_dir_path, extension=".json")
+    else:
+        print(robotic_pose_dir_path + " is not a directory")
+        return None
+    robotic_pose_list = []
+    trans_list = []
+    for pose_file_path in pose_file_list:
+        robotic_pose_data = json.load(open(pose_file_path, "r"))
+        trans_data = rob_pose_to_trans(robotic_pose_data)
+
+        robotic_pose_list.append(robotic_pose_data)
+        trans_list.append(trans_data)
+    return robotic_pose_list, trans_list
 
 
-def save_robotic_pose(path, robotic_pose_list):
+def save_robotic_pose_list(path, robotic_pose_list):
     json.dump(robotic_pose_list, open(path, "w"), indent=4)
+
+
+def save_trans_list(path, trans_list):
+    data_to_save = []
+    for trans in trans_list:
+        data_to_save.append(trans.tolist())
+    json.dump(data_to_save, open(path, "w"), indent=4)
 
 
 def save_trans_as_robotic_pose(path, trans_list):
@@ -49,8 +80,6 @@ def save_trans_as_robotic_pose(path, trans_list):
     for trans in trans_list:
         robotic_pose_list.append(trans_to_rob_pose(trans))
     json.dump(robotic_pose_list, open(path, "w"), indent=4)
-
-
 
 
 

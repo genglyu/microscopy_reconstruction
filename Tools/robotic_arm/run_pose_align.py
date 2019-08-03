@@ -1,11 +1,11 @@
 import pose_align
-import pose_convert
+import robotic_data_convert
 import visualization
 import open3d
 import robotic_visualizer
 
 
-trans_list = pose_convert.read_robotic_pose_as_trans("testing_pose.testingjson", exclude_beginning_n=40)
+trans_list = robotic_data_convert.read_robotic_pose_list_as_trans_list("testing_pose.testingjson", exclude_beginning_n=40)
 
 
 # optimizer = pose_align.PoseGraphOptimizerG2oRobotic()
@@ -14,11 +14,11 @@ trans_list = pose_convert.read_robotic_pose_as_trans("testing_pose.testingjson",
 # optimizer.save_optimised_as_robotic_pose("aligned_pose.testingjson")
 
 
-robotic_pose_list_original = pose_convert.read_robotic_pose("testing_pose.testingjson")
-points_original = pose_convert.robotic_pose_list_to_points(robotic_pose_list_original)
+robotic_pose_list_original = robotic_data_convert.read_robotic_pose_list("testing_pose.testingjson")
+points_original = robotic_data_convert.robotic_pose_list_to_points(robotic_pose_list_original)
 
-robotic_pose_list = pose_convert.read_robotic_pose("aligned_pose.testingjson")
-points = pose_convert.robotic_pose_list_to_points(robotic_pose_list)
+robotic_pose_list = robotic_data_convert.read_robotic_pose_list("aligned_pose.testingjson")
+points = robotic_data_convert.robotic_pose_list_to_points(robotic_pose_list)
 
 # navigator = navigation.NavigationGraph()
 # navigator.load_point_list(points, 0.03)

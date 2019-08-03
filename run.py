@@ -9,7 +9,7 @@ import sys
 sys.path.append("./Utility")
 sys.path.append("./CoreModules")
 sys.path.append("./Tools")
-from file import *
+from file_managing import *
 from copy import deepcopy
 from tile_info_processing import *
 

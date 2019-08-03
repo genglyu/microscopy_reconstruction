@@ -1,10 +1,10 @@
 import robotic_surface_interpolation
 import robotic_visualizer
-import pose_convert
+import robotic_data_convert
 
 surface_interpolator = robotic_surface_interpolation.RoboticSurfaceConstructor()
 
-robotic_pose_list = pose_convert.read_robotic_pose("aligned_pose.testingjson")
+robotic_pose_list = robotic_data_convert.read_robotic_pose_list("aligned_pose.testingjson")
 
 surface_interpolator.load_robotic_pose_list(robotic_pose_list)
 

@@ -1,0 +1,17 @@
+{
+  "path_data": "",
+  "robotic_reconstruction_pose_dir": "captured_data",
+  "robotic_reconstruction_workspace": "surface_interpolation_dir",
+
+  "robotic_stitching_pose_dir": "captured_data",
+  "robotic_stitching_img_dir": "captured_data",
+
+  "robotic_reconstruction_pose_list_all": "robotic_reconstruction_pose_list_all.json",
+  "robotic_reconstruction_trans_list_all": "robotic_reconstruction_trans_list_all.json",
+  "robotic_reconstruction_trans_list_aligned": "robotic_reconstruction_trans_list_aligned.json",
+  "robotic_reconstruction_trans_interpolated": "robotic_reconstruction_trans_interpolated.json",
+  "robotic_reconstruction_trans_ordered": "robotic_reconstruction_trans_ordered.json",
+  "robotic_reconstruction_robotic_trans_ordered": "robotic_reconstruction_trans_ordered.json",
+
+  "crop_the_beginning_n": "40"
+}

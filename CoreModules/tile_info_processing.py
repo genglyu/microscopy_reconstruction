@@ -11,7 +11,7 @@ import math
 import matplotlib.pyplot as plt
 
 sys.path.append("../Utility")
-from file import *
+from file_managing import *
 
 
 class TileInfo:

@@ -1,6 +1,6 @@
 import g2o
 import numpy
-from pose_convert import *
+from robotic_data_convert import *
 from open3d import *
 
 
@@ -110,9 +110,9 @@ class PoseGraphOptimizerG2oRobotic(g2o.SparseOptimizer):
             trans_list.append(self.get_pose(i))
         return trans_list
 
-    def save_optimised_as_robotic_pose(self, path):
+    def export_optimised_as_robotic_pose(self):
         robotic_pose_list = []
         for i in range(self.node_amount):
             robo_pose = trans_to_rob_pose(self.get_pose(i))
             robotic_pose_list.append(robo_pose)
-        json.dump(robotic_pose_list, open(path, "w"), indent=4)
+        return robotic_pose_list

@@ -2,7 +2,7 @@ import open3d
 import numpy
 from collections import defaultdict
 from open3d import *
-from pose_convert import *
+from robotic_data_convert import *
 
 # Load a list of poses, convert to list of points. If distance between points is less than r, make a edge.
 # Traversal by depth first order.

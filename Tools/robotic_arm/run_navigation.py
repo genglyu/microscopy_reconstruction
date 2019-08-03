@@ -1,13 +1,13 @@
 import navigation
-import pose_convert
+import robotic_data_convert
 import visualization
 import open3d
 
-robotic_pose_list_original = pose_convert.read_robotic_pose("testing_pose.testingjson", exclude_beginning_n=40)
-points_original = pose_convert.robotic_pose_list_to_points(robotic_pose_list_original)
+robotic_pose_list_original = robotic_data_convert.read_robotic_pose_list("testing_pose.testingjson", exclude_beginning_n=40)
+points_original = robotic_data_convert.robotic_pose_list_to_points(robotic_pose_list_original)
 
-robotic_pose_list = pose_convert.read_robotic_pose("interpolated.testingjson")
-points = pose_convert.robotic_pose_list_to_points(robotic_pose_list)
+robotic_pose_list = robotic_data_convert.read_robotic_pose_list("interpolated.testingjson")
+points = robotic_data_convert.robotic_pose_list_to_points(robotic_pose_list)
 
 
 
@@ -21,10 +21,10 @@ navigator.load_point_list(points, 0.03)
 order = navigator.bfs(2)
 
 
-points = pose_convert.adjust_order(points, order)
-robotic_pose_list = pose_convert.adjust_order(robotic_pose_list, order)
+points = robotic_data_convert.adjust_order(points, order)
+robotic_pose_list = robotic_data_convert.adjust_order(robotic_pose_list, order)
 
-pose_convert.save_robotic_pose("ordered.testingjson", robotic_pose_list)
+robotic_data_convert.save_robotic_pose_list("ordered.testingjson", robotic_pose_list)
 
 pcd_original = visualization.make_point_cloud(points_original, color=[1, 0, 0])
 
