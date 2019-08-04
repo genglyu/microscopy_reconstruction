@@ -46,7 +46,7 @@ class RoboticSurfaceConstructor:
             pose = rob_pose_to_trans(robotic_pose)
             self.pose_list.append(pose)
             self.points_list.append(numpy.dot(pose, numpy.array([0, 0, 0, 1]).T).T[0:3].tolist())
-            self.normal_list.append(numpy.dot(pose, numpy.array([0, 0, 1, 0]).T).T[0:3].tolist())
+            self.normal_list.append(numpy.dot(pose, numpy.array([1, 0, 0, 0]).T).T[0:3].tolist())
 
         self.points_list = numpy.asarray(self.points_list)
 
@@ -56,7 +56,24 @@ class RoboticSurfaceConstructor:
 
         self.sampling_kd_tree = KDTreeFlann(self.sampling_pcd)
 
-        draw_geometries([self.sampling_pcd])
+        # draw_geometries([self.sampling_pcd])
+
+    def load_robotic_trans_list(self, robotic_trans_list):
+        # robotic_pose_list = json.load(open(robotic_pose_list_path, "r"))["pose_list"]
+        # robotic_pose_list = json.load(open(robotic_pose_list_path, "r"))
+        for i, robotic_trans in enumerate(robotic_trans_list):
+            self.pose_list.append(robotic_trans)
+            self.points_list.append(numpy.dot(robotic_trans, numpy.array([0, 0, 0, 1]).T).T[0:3].tolist())
+            self.normal_list.append(numpy.dot(robotic_trans, numpy.array([1, 0, 0, 0]).T).T[0:3].tolist())
+
+        self.points_list = numpy.asarray(self.points_list)
+        self.sampling_pcd.points = Vector3dVector(numpy.asarray(self.points_list))
+        self.sampling_pcd.normals = Vector3dVector(numpy.asarray(self.normal_list))
+        self.sampling_pcd.colors = Vector3dVector(numpy.repeat(numpy.array([[0, 0, 0]]), len(self.points_list), axis=0))
+
+        self.sampling_kd_tree = KDTreeFlann(self.sampling_pcd)
+
+        # draw_geometries([self.sampling_pcd])
 
     def interpolate_sub(self, index=0, radius=0.03, interpolate_w=0.01, interpolate_h=0.01, interpolate_amount=40):
         [_, idx, _] = self.sampling_kd_tree.search_radius_vector_3d(self.points_list[index], radius=radius)
@@ -68,17 +85,17 @@ class RoboticSurfaceConstructor:
 
         transformed_sub_points = numpy.dot(numpy.linalg.inv(self.pose_list[index]), sub_points.T).T[:, 0:3]
 
-        xy = transformed_sub_points[:, 0:2]
-        z = transformed_sub_points[:, 2]
+        yz = transformed_sub_points[:, 1:2]
+        x = transformed_sub_points[:, 0]
 
-        grid_x, grid_y = numpy.mgrid[
+        grid_y, grid_z = numpy.mgrid[
                          -interpolate_w/2:interpolate_w/2:(interpolate_amount * 1j),
                          -interpolate_h/2:interpolate_h/2:(interpolate_amount * 1j)]
 
-        grid_z = griddata(xy, z, (grid_x, grid_y), method='cubic')
+        grid_x = griddata(yz, x, (grid_y, grid_z), method='cubic')
 
         interpolate_points = numpy.c_[grid_x.reshape(-1), grid_y.reshape(-1), grid_z.reshape(-1)]
-        interpolate_points = interpolate_points[numpy.logical_not(numpy.isnan(interpolate_points[:, 2]))]
+        interpolate_points = interpolate_points[numpy.logical_not(numpy.isnan(interpolate_points[:, 0]))]
 
         # print(grid_x)
         # print(grid_x.shape)
@@ -94,7 +111,7 @@ class RoboticSurfaceConstructor:
 
         normal_list = []
         for normal in sub_pcd.normals:
-            if normal[2] < 0:
+            if normal[0] < 0:
                 normal_list.append(normal * -1)
             else:
                 normal_list.append(normal)

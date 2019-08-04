@@ -11,6 +11,11 @@ trans_rob_to_camera = transforms3d.affines.compose(T=[0, 0, 0],
                                                       [0, -1, 0],
                                                       [0, 0, -1]],
                                                    Z=[1, 1, 1])
+plane_shifting_rotation_trans = numpy.array([[0, 1, 0, 0],
+                                             [0, 0, 1, 0],
+                                             [1, 0, 0, 0],
+                                             [0, 0, 0, 1]])
+trans_rob_to_camera = numpy.dot(trans_rob_to_camera, plane_shifting_rotation_trans)
 trans_camera_to_rob = numpy.linalg.inv(trans_rob_to_camera)
 
 
@@ -82,6 +87,8 @@ def save_trans_as_robotic_pose(path, trans_list):
     json.dump(robotic_pose_list, open(path, "w"), indent=4)
 
 
+def save_robotic_full_pose_list(path, robotic_full_pose_list):
+    json.dump(robotic_full_pose_list, open(path, "w"), indent=4)
 
 
 # can also be used to make a sampled list.
@@ -123,6 +130,15 @@ def robotic_pose_list_to_points(robotic_pose_list):
     return point_list
 
 
+def trans_list_to_pos_ori_list(trans_list):
+    robotic_full_pose_list = []
+    for trans in trans_list:
+        [T, R, Z, S] = transforms3d.affines.decompose(trans)
+        quaternion = Rotation.from_dcm(R).as_quat()
+        robotic_full_pose_list.append([T, quaternion])
+    return robotic_full_pose_list
+
+
 def non_outlier_index_list_static(point_list, nb_neighbours=20, std_ratio=2.0):
     pcd = open3d.PointCloud()
     pcd.points = open3d.Vector3dVector(point_list)
@@ -151,5 +167,4 @@ def display_inlier_outlier(cloud, ind):
     outlier_cloud.paint_uniform_color([1, 0, 0])
     inlier_cloud.paint_uniform_color([0.8, 0.8, 0.8])
     open3d.visualization.draw_geometries([inlier_cloud, outlier_cloud])
-
 

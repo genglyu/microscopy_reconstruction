@@ -7,15 +7,13 @@ import logging
 import threading
 import time
 
-from robotic_surface_interpolation import *
 
-
-def make_tile_frame(trans_matrix, width, height, color=[0.5, 0.5, 0.5]):
+def make_tile_frame(trans_matrix, width=0.0052, height=0.0039, color=[0.5, 0.5, 0.5], fill=False):
     tile_frame = LineSet()
-    lb_rb_rt_lt = [[-width / 2, -height / 2, 0],
-                   [ width / 2, -height / 2, 0],
-                   [ width / 2,  height / 2, 0],
-                   [-width / 2,  height / 2, 0]
+    lb_rb_rt_lt = [[0, -width / 2, -height / 2],
+                   [0, width / 2, -height / 2],
+                   [0, width / 2,  height / 2],
+                   [0, -width / 2,  height / 2]
                    ]
     lines = [[0, 1], [1, 2], [2, 3], [3, 0]]
     colors = [color, color, color, color]
@@ -26,47 +24,50 @@ def make_tile_frame(trans_matrix, width, height, color=[0.5, 0.5, 0.5]):
     return tile_frame
 
 
-class CameraWireFrame:
-    def __init__(self, width, height, length):
-        self.camera_pose = numpy.identity(4)
-        self.wire_frame = LineSet()
-        # self.width = width
-        # self.height = height
-        # self.length = length
-
-        self.corners = numpy.array([[-width / 2, -height / 2, 0],
-                                    [ width / 2, -height / 2, 0],
-                                    [ width / 2,  height / 2, 0],
-                                    [-width / 2,  height / 2, 0],
-                                    [-width / 2, -height / 2, length],
-                                    [width / 2, -height / 2, length],
-                                    [width / 2, height / 2, length],
-                                    [-width / 2, height / 2, length]])
-
-        self.wire_frame.points = Vector3dVector(self.corners)
-        self.wire_frame.lines = Vector2iVector([[0, 1], [1, 2], [2, 3], [3, 0],
-                                                [4, 5], [5, 6], [6, 7], [7, 4],
-                                                [0, 4], [1, 5], [2, 6], [3, 7]])
-        self.wire_frame.colors = Vector3dVector([[0, 0, 1], [0, 0, 1], [1, 0, 0], [0, 0, 1],
-                                                 [0, 0, 1], [0, 0, 1], [0, 0, 1], [0, 0, 1],
-                                                 [0, 1, 0], [0, 1, 0], [0, 1, 0], [0, 1, 0]])
-
-    def update_pose(self, pose):
-        updated_corners = numpy.dot(pose, numpy.c_[self.corners, numpy.ones(8)].T).T[:, 0:3]
-        self.wire_frame.points = Vector3iVector(updated_corners)
+def make_pcd_from_trans_list(trans_list, color=[0,0,0]):
+    pcd = PointCloud()
+    points = []
+    normals = []
+    colors = []
+    for trans in trans_list:
+        points.append(numpy.dot(trans, numpy.asarray([0, 0, 0, 1]).T).T[0:3])
+        normals.append(numpy.dot(trans, numpy.asarray([1, 0, 0, 0]).T).T[0:3])
+        colors.append(color)
+    pcd.points = Vector3dVector(points)
+    pcd.normals = Vector3dVector(normals)
+    pcd.colors = Vector3dVector(colors)
+    return pcd
 
 
-class RoboticVisualizer:
-    def __init__(self):
+def make_tile_frame_list_from_trans_list(trans_list, width=0.0052, height=0.0039, color=[0, 0, 0]):
+    tile_frame_list = []
+    for trans in trans_list:
+        tile_frame = make_tile_frame(trans, width, height, color)
+        tile_frame_list.append(tile_frame)
+
+
+
+def make_connection_of_pcd_order(pcd, color=[0, 0, 0]):
+    connection = LineSet()
+    connection.points = pcd.points
+    lines = []
+    colors = []
+    for i, point in enumerate(pcd.points):
+        if i > 0:
+            lines.append([i-1, i])
+            colors.append(color)
+    connection.lines = Vector2iVector(lines)
+    connection.colors = Vector3dVector(colors)
+    return connection
+
+
+class RoboticVisualizerOpen3d:
+    def __init__(self, robotic_config):
+        self.robotic_config = robotic_config
         # self.microscope_camera = cv2.VideoCapture(0)
-
         # self.viewer = Visualizer()
-        self.viewer = VisualizerWithKeyCallback()
         self.coordinate_frame = geometry.create_mesh_coordinate_frame(size=0.01, origin=[0.0, 0.0, 0.0])
 
-        self.current_camera_pose = numpy.identity(4)
-
-        self.camera_wire_frames_controller = CameraWireFrame(0.0048, 0.0036, 0.02)
         self.tile_width = 0.0048
         self.tile_height = 0.0036
 
@@ -84,9 +85,9 @@ class RoboticVisualizer:
 
         # self.viewer_window_thread = threading.Thread(target=self.keep_updating)
 
-    def update_camera_pose_robotic(self, pose_rob=numpy.ones(16)):
-        self.current_camera_pose = rob_pose_to_trans(pose_rob)
-        self.camera_wire_frames_controller.update_pose(self.current_camera_pose)
+    # def update_camera_pose_robotic(self, pose_rob=numpy.ones(16)):
+    #     self.current_camera_pose = rob_pose_to_trans(pose_rob)
+    #     self.camera_wire_frames_controller.update_pose(self.current_camera_pose)
 
     def add_sampled_tile_wire_frame(self, pose=None):
         if pose is None:
