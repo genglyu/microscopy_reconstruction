@@ -13,5 +13,23 @@
   "robotic_reconstruction_trans_ordered": "robotic_reconstruction_trans_ordered.json",
   "robotic_reconstruction_robotic_trans_ordered": "robotic_reconstruction_trans_ordered.json",
 
-  "crop_the_beginning_n": "40"
+  "original_pose_graph": "original.g2o",
+  "aligned_pose_graph": "aligned.g2o",
+
+  "crop_the_beginning_n": 40,
+
+  "tile_width": 0.0052,
+  "tile_height": 0.0039,
+
+  "visualization": [
+    {
+      "original_pcd": false,
+      "original_wire_frame": false,
+      "aligned_pcd": false,
+      "aligned_wire_frame": false,
+      "interpolated_pcd": false,
+      "interpolated_wire_frame": false,
+      "navigated_route": false
+    }
+  ]
 }

@@ -2,6 +2,8 @@ import g2o
 import numpy
 from robotic_data_convert import *
 from open3d import *
+import multiprocessing
+from joblib import Parallel, delayed
 
 
 # It should be reasonable to say no more than 400000 nodes can be fed into this... Even considering the weird index.
@@ -47,18 +49,18 @@ class PoseGraphOptimizerG2oRobotic(g2o.SparseOptimizer):
     def add_neighbour_edge(self, s_id, t_id, distance=0.0):
         weight = 60 * self.align_radius / (distance + self.align_radius / 10)
         angle_weight = 0
-        print("Weight: %5f" % weight)
+        print("%6d to %6d: Weight: %5f" % (s_id, t_id, weight))
         self.add_edge(s_id, t_id,
                       local_trans=numpy.array([[1, 0, 0, 0],
                                                [0, 1, 0, 0],
                                                [0, 0, 1, 0],
                                                [0, 0, 0, 1]]),
-                      information=numpy.array([[0, 0, 0, 0, 0, 0],
+                      information=numpy.array([[weight, 0, 0, 0, 0, 0],
                                                [0, 0, 0, 0, 0, 0],
-                                               [0, 0, weight, 0, 0, 0],
-                                               [0, 0, 0, angle_weight, 0, 0],
+                                               [0, 0, 0, 0, 0, 0],
+                                               [0, 0, 0, 0, 0, 0],
                                                [0, 0, 0, 0, angle_weight, 0],
-                                               [0, 0, 0, 0, 0, 0]]),
+                                               [0, 0, 0, 0, 0, angle_weight]]),
                       robust_kernel=None)
 
     def add_vertex(self, id_inside=0, trans=numpy.identity(4), fixed=False):
@@ -97,11 +99,35 @@ class PoseGraphOptimizerG2oRobotic(g2o.SparseOptimizer):
         pcd.points = Vector3dVector(points)
         kd_tree = KDTreeFlann(pcd)
 
+        # multi threading processing
+
+        # for i, point in enumerate(points):
+        #     neighbour_edge_dict[i] = []
+        # max_thread = min(multiprocessing.cpu_count(), max(len(points), 1))
+        # neighbour_edge_list = Parallel(n_jobs=max_thread)(
+        #     delayed(kd_tree.search_radius_vector_3d)(point, radius=self.align_radius)
+        #     for point in points)
+        #
+        # edge_list = []
+        # for s_id, neighbour_edge_sub_list in enumerate(neighbour_edge_list):
+        #     for t_id in neighbour_edge_sub_list:
+        #         edge_list.append([s_id, t_id])
+        #
+        # max_thread = min(multiprocessing.cpu_count(), max(len(edge_list), 1))
+        # distance_results = Parallel(n_jobs=max_thread)(
+        #     delayed(numpy.linalg.norm)(points[s_id] - points[t_id])
+        #     for [s_id, t_id] in edge_list)
+        #
+        # for i, [s_id, t_id] in enumerate(edge_list):
+        #     self.add_neighbour_edge(s_id, t_id, distance_results[i])
+
+
         for i, point in enumerate(points):
             [_, idx, _] = kd_tree.search_radius_vector_3d(point, radius=self.align_radius)
             for id in idx:
                 if id > i:
-                    distance = numpy.linalg.norm(numpy.asarray(points[i]) - numpy.asarray(points[id]))
+                    # distance = numpy.linalg.norm(numpy.asarray(points[i]) - numpy.asarray(points[id]))
+                    distance = 1
                     self.add_neighbour_edge(i, id, distance)
 
     def export_optimized_as_trans_list(self):
@@ -116,3 +142,6 @@ class PoseGraphOptimizerG2oRobotic(g2o.SparseOptimizer):
             robo_pose = trans_to_rob_pose(self.get_pose(i))
             robotic_pose_list.append(robo_pose)
         return robotic_pose_list
+
+    def save_pose_graph(self, path):
+        super().save(path)

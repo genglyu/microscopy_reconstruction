@@ -34,10 +34,6 @@ if __name__ == "__main__":
                         action="store_true",
                         help='Generate a relatively reasonable route through all the interpolated sampling points')
 
-    parser.add_argument('--navigation', '-n',
-                        action="store_true",
-                        help='Generate a relatively reasonable route through all the interpolated sampling points')
-
     parser.add_argument('--visualization', '-v',
                         action="store_true",
                         help='')
@@ -70,6 +66,7 @@ if __name__ == "__main__":
                                     robotic_config["robotic_reconstruction_pose_list_all"]),
                                pose_list)
         save_trans_list(join(robotic_config["path_data"],
+                             robotic_config["robotic_reconstruction_workspace"],
                              robotic_config["robotic_reconstruction_trans_list_all"]),
                         trans_list)
     if args.align:
@@ -78,12 +75,23 @@ if __name__ == "__main__":
                                           robotic_config["robotic_reconstruction_workspace"],
                                           robotic_config["robotic_reconstruction_trans_list_all"]))
         optimizer = pose_align.PoseGraphOptimizerG2oRobotic()
-        optimizer.load_trans_list()
+        optimizer.load_trans_list(trans_list)
+        optimizer.save_pose_graph(join(robotic_config["path_data"],
+                                       robotic_config["robotic_reconstruction_workspace"],
+                                       robotic_config["original_pose_graph"]))
+
         optimizer.optimize()
+
+        optimizer.save_pose_graph(join(robotic_config["path_data"],
+                                       robotic_config["robotic_reconstruction_workspace"],
+                                       robotic_config["aligned_pose_graph"]))
+
         trans_list_aligned = optimizer.export_optimized_as_trans_list()
         save_trans_list(join(robotic_config["path_data"],
                              robotic_config["robotic_reconstruction_workspace"],
                              robotic_config["robotic_reconstruction_trans_list_aligned"]))
+
+
     if args.interpolation:
         import robotic_surface_interpolation
         trans_list_aligned = read_trans_list(join(robotic_config["path_data"],
@@ -91,7 +99,7 @@ if __name__ == "__main__":
                                                   robotic_config["robotic_reconstruction_trans_list_aligned"]))
         surface_interpolator = robotic_surface_interpolation.RoboticSurfaceConstructor()
 
-        surface_interpolator.load_robotic_trans_list(trans_list_aligned)
+        surface_interpolator.load_trans_list(trans_list_aligned)
         surface_interpolator.run_interpolation()
         surface_interpolator.save_interpolated_robotic_pose(
             join(robotic_config["path_data"],
@@ -123,9 +131,10 @@ if __name__ == "__main__":
                                          robotic_config["robotic_reconstruction_trans_ordered"]),
                                     trans_list_to_pos_ori_list(trans_list_ordered))
 
-
-    if args.visulization:
-
+    if args.visualization:
+        import robotic_visualizer
+        viewer = robotic_visualizer.RoboticVisualizerOpen3d(robotic_config)
+        viewer.view_via_robotic_config()
 
     # Visualize ==================================================================================
 

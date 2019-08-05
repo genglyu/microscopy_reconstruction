@@ -28,7 +28,7 @@ def trans_to_rob_pose(trans):
 
 class RoboticSurfaceConstructor:
     def __init__(self):
-        self.pose_list = []
+        self.trans_list = []
         self.points_list = []
         self.normal_list = []
         self.sampling_pcd = PointCloud()
@@ -39,32 +39,11 @@ class RoboticSurfaceConstructor:
         self.integrated_surface_pcd = PointCloud()
     # Find the closest actually sampled point and then add rotation to the transformation.
 
-    def load_robotic_pose_list(self, robotic_pose_list):
-        # robotic_pose_list = json.load(open(robotic_pose_list_path, "r"))["pose_list"]
-        # robotic_pose_list = json.load(open(robotic_pose_list_path, "r"))
-        for i, robotic_pose in enumerate(robotic_pose_list):
-            pose = rob_pose_to_trans(robotic_pose)
-            self.pose_list.append(pose)
-            self.points_list.append(numpy.dot(pose, numpy.array([0, 0, 0, 1]).T).T[0:3].tolist())
-            self.normal_list.append(numpy.dot(pose, numpy.array([1, 0, 0, 0]).T).T[0:3].tolist())
-
-        self.points_list = numpy.asarray(self.points_list)
-
-        self.sampling_pcd.points = Vector3dVector(numpy.asarray(self.points_list))
-        self.sampling_pcd.normals = Vector3dVector(numpy.asarray(self.normal_list))
-        self.sampling_pcd.colors = Vector3dVector(numpy.repeat(numpy.array([[0, 0, 0]]), len(self.points_list), axis=0))
-
-        self.sampling_kd_tree = KDTreeFlann(self.sampling_pcd)
-
-        # draw_geometries([self.sampling_pcd])
-
-    def load_robotic_trans_list(self, robotic_trans_list):
-        # robotic_pose_list = json.load(open(robotic_pose_list_path, "r"))["pose_list"]
-        # robotic_pose_list = json.load(open(robotic_pose_list_path, "r"))
-        for i, robotic_trans in enumerate(robotic_trans_list):
-            self.pose_list.append(robotic_trans)
-            self.points_list.append(numpy.dot(robotic_trans, numpy.array([0, 0, 0, 1]).T).T[0:3].tolist())
-            self.normal_list.append(numpy.dot(robotic_trans, numpy.array([1, 0, 0, 0]).T).T[0:3].tolist())
+    def load_trans_list(self, trans_list):
+        for i, trans in enumerate(trans_list):
+            self.trans_list.append(trans)
+            self.points_list.append(numpy.dot(trans, numpy.array([0, 0, 0, 1]).T).T[0:3].tolist())
+            self.normal_list.append(numpy.dot(trans, numpy.array([1, 0, 0, 0]).T).T[0:3].tolist())
 
         self.points_list = numpy.asarray(self.points_list)
         self.sampling_pcd.points = Vector3dVector(numpy.asarray(self.points_list))
@@ -72,7 +51,6 @@ class RoboticSurfaceConstructor:
         self.sampling_pcd.colors = Vector3dVector(numpy.repeat(numpy.array([[0, 0, 0]]), len(self.points_list), axis=0))
 
         self.sampling_kd_tree = KDTreeFlann(self.sampling_pcd)
-
         # draw_geometries([self.sampling_pcd])
 
     def interpolate_sub(self, index=0, radius=0.03, interpolate_w=0.01, interpolate_h=0.01, interpolate_amount=40):
@@ -122,6 +100,11 @@ class RoboticSurfaceConstructor:
         return sub_pcd
 
     def run_interpolation(self):
+
+        # Down sample the entire point cloud to pick the ones that do interpolation on ================================
+
+
+
         for i, pose in enumerate(self.pose_list):
             sub_pcd = self.interpolate_sub(index=i)
             # sub_pcd.transform(pose)

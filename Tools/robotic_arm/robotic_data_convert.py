@@ -107,7 +107,7 @@ def trans_list_to_points(trans_list):
     return point_list
 
 
-def trans_list_to_points_normals(trans_list, original_normal=[0, 0, 1.0]):
+def trans_list_to_points_normals(trans_list, original_normal=[1.0, 0, 0]):
     point_list = []
     normal_list = []
     for trans in trans_list:
