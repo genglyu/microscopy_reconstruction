@@ -133,9 +133,10 @@ def robotic_pose_list_to_points(robotic_pose_list):
 def trans_list_to_pos_ori_list(trans_list):
     robotic_full_pose_list = []
     for trans in trans_list:
+        trans = numpy.dot(trans_camera_to_rob, trans)
         [T, R, Z, S] = transforms3d.affines.decompose(trans)
         quaternion = Rotation.from_dcm(R).as_quat()
-        robotic_full_pose_list.append([T, quaternion])
+        robotic_full_pose_list.append([T.tolist(), quaternion.tolist()])
     return robotic_full_pose_list
 
 

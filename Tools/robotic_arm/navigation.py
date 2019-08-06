@@ -15,15 +15,27 @@ class NavigationGraph:
         self.points = []
         self.pcd = None
         self.kd_tree = None
+        self.trans_list = []
 
         self.dfs_order_index_list = []
         self.bfs_order_index_list = []
 
-    def load_point_list(self, point_list, connection_range):
-        self.points = point_list
+    def load_trans_list(self, trans_list, connection_range):
+        self.points = trans_list_to_points(trans_list)
         self.pcd = PointCloud()
         self.pcd.points = Vector3dVector(self.points)
         self.kd_tree = KDTreeFlann(self.pcd)
+
+        [_, idx, _] = self.kd_tree.search_radius_vector_3d([0, 0, 0], numpy.linalg.norm(self.points[0]) + 1)
+        new_trans_list = adjust_order(trans_list, idx)
+        print(idx)
+
+        self.points = trans_list_to_points(new_trans_list)
+        self.pcd = PointCloud()
+        self.pcd.points = Vector3dVector(self.points)
+        self.kd_tree = KDTreeFlann(self.pcd)
+
+        self.trans_list = new_trans_list
 
         for i, point in enumerate(self.points):
             [_, idx, _] = self.kd_tree.search_radius_vector_3d(point, connection_range)
@@ -73,7 +85,9 @@ class NavigationGraph:
                 if not visited[i]:
                     queue.append(i)
                     visited[i] = True
-        return self.bfs_order_index_list
+
+        self.trans_list = adjust_order(self.trans_list, self.bfs_order_index_list)
+        return self.trans_list
 
     def dfs_util(self, v, visited):
         visited[v] = True
@@ -89,6 +103,7 @@ class NavigationGraph:
         for i in range(node_amount):
             if not visited[i]:
                 self.dfs_util(i, visited)
-        return self.dfs_order_index_list
+        self.trans_list = adjust_order(self.trans_list, self.dfs_order_index_list)
+        return self.trans_list
 
 

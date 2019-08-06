@@ -1,7 +1,7 @@
 {
   "path_data": "",
-  "robotic_reconstruction_pose_dir": "captured_data",
-  "robotic_reconstruction_workspace": "surface_interpolation_dir",
+  "robotic_reconstruction_pose_dir": "captured_data/",
+  "robotic_reconstruction_workspace": "surface_interpolation_dir/",
 
   "robotic_stitching_pose_dir": "captured_data",
   "robotic_stitching_img_dir": "captured_data",

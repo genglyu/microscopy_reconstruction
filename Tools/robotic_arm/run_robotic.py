@@ -89,7 +89,8 @@ if __name__ == "__main__":
         trans_list_aligned = optimizer.export_optimized_as_trans_list()
         save_trans_list(join(robotic_config["path_data"],
                              robotic_config["robotic_reconstruction_workspace"],
-                             robotic_config["robotic_reconstruction_trans_list_aligned"]))
+                             robotic_config["robotic_reconstruction_trans_list_aligned"]),
+                        trans_list_aligned)
 
 
     if args.interpolation:
@@ -101,7 +102,7 @@ if __name__ == "__main__":
 
         surface_interpolator.load_trans_list(trans_list_aligned)
         surface_interpolator.run_interpolation()
-        surface_interpolator.save_interpolated_robotic_pose(
+        surface_interpolator.save_interpolated_trans_list(
             join(robotic_config["path_data"],
                  robotic_config["robotic_reconstruction_workspace"],
                  robotic_config["robotic_reconstruction_trans_interpolated"]))
@@ -114,13 +115,15 @@ if __name__ == "__main__":
 
         navigator = navigation.NavigationGraph()
 
-        points = trans_list_to_points(trans_list_interpolated)
-        navigator.load_point_list(points, 0.03)
-        order = navigator.dfs()
+        # points = trans_list_to_points(trans_list_interpolated)
+        navigator.load_trans_list(trans_list_interpolated, 0.03)
+        # order = navigator.dfs()
         # order = navigator.bfs(2)
 
         # points = adjust_order(points, order)
-        trans_list_ordered = adjust_order(trans_list_interpolated, order)
+        # trans_list_ordered = adjust_order(trans_list_interpolated, order)
+        trans_list_ordered = navigator.dfs()
+
         save_trans_list(join(robotic_config["path_data"],
                              robotic_config["robotic_reconstruction_workspace"],
                              robotic_config["robotic_reconstruction_trans_ordered"]),
@@ -128,7 +131,7 @@ if __name__ == "__main__":
 
         save_robotic_full_pose_list(join(robotic_config["path_data"],
                                          robotic_config["robotic_reconstruction_workspace"],
-                                         robotic_config["robotic_reconstruction_trans_ordered"]),
+                                         robotic_config["robotic_reconstruction_robotic_trans_ordered"]),
                                     trans_list_to_pos_ori_list(trans_list_ordered))
 
     if args.visualization:

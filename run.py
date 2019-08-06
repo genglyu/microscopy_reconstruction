@@ -112,7 +112,7 @@ if __name__ == "__main__":
 
     # Prepare tile info dict ======================================================================
     if args.dict_make_tile_info_dict_all:
-        tile_info_dict_all = make_tile_info_dict_all(config)
+        tile_info_dict_all = make_tile_info_dict_all_unity(config)
         save_tile_info_dict(join(config["path_data"], config["tile_info_dict_all_name"]), tile_info_dict_all)
     if args.dict_load_tile_info_dict_all:
         tile_info_dict_all = read_tile_info_dict(join(config["path_data"], config["tile_info_dict_all_name"]))
@@ -124,7 +124,7 @@ if __name__ == "__main__":
             try:
                 tile_info_dict_all = read_tile_info_dict(join(config["path_data"], config["tile_info_dict_all_name"]))
             except:
-                tile_info_dict_all = make_tile_info_dict_all(config)
+                tile_info_dict_all = make_tile_info_dict_all_unity(config)
                 save_tile_info_dict(join(config["path_data"], config["tile_info_dict_all_name"]), tile_info_dict_all)
             tile_info_dict = make_info_dict(tile_info_dict_all, config)
         save_tile_info_dict(join(config["path_data"], config["tile_info_dict_name"]), tile_info_dict)

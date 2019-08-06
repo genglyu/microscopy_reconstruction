@@ -107,7 +107,7 @@ class RoboticVisualizerOpen3d:
                                                            self.robotic_config["robotic_reconstruction_workspace"],
                                                            self.robotic_config["robotic_reconstruction_trans_list_all"])
                                                       )
-                self.original_pcd = make_pcd_from_trans_list(original_trans_list)
+                self.original_pcd = make_pcd_from_trans_list(original_trans_list, color=[0, 0, 0])
             draw_list.append(self.original_pcd)
         if original_wire_frame:
             if self.original_wire_frame is None:
@@ -124,17 +124,19 @@ class RoboticVisualizerOpen3d:
                          self.robotic_config["robotic_reconstruction_workspace"],
                          self.robotic_config["robotic_reconstruction_trans_list_aligned"])
                 )
-                self.aligned_pcd = make_pcd_from_trans_list(aligned_trans_list)
+                self.aligned_pcd = make_pcd_from_trans_list(aligned_trans_list,
+                                                            color=[1, 0, 0])
             draw_list.append(self.aligned_pcd)
         if aligned_wire_frame:
-            if self.aligned_pcd is None:
+            if self.aligned_wire_frame is None:
                 aligned_trans_list = read_trans_list(
                     join(self.robotic_config["path_data"],
                          self.robotic_config["robotic_reconstruction_workspace"],
                          self.robotic_config["robotic_reconstruction_trans_list_aligned"])
                 )
-                self.aligned_wire_frame = make_tile_frame_list_from_trans_list(aligned_trans_list)
-            draw_list += self.aligned_pcd
+                self.aligned_wire_frame = make_tile_frame_list_from_trans_list(aligned_trans_list,
+                                                                               color=[0.7, 0.7, 0.7])
+            draw_list += self.aligned_wire_frame
         if interpolated_pcd:
             if self.interpolated_pcd is None:
                 interpolated_trans_list = read_trans_list(
@@ -161,7 +163,7 @@ class RoboticVisualizerOpen3d:
                          self.robotic_config["robotic_reconstruction_trans_ordered"])
                 )
                 navigated_pcd = make_pcd_from_trans_list(ordered_trans_list)
-                self.navigated_route = make_connection_of_pcd_order(navigated_pcd)
-            draw_list += self.navigated_route
+                self.navigated_route = make_connection_of_pcd_order(navigated_pcd, color=[1, 0, 0])
+            draw_list.append(self.navigated_route)
 
         draw_geometries(draw_list)

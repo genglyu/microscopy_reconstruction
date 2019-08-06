@@ -13,7 +13,7 @@ class PoseGraphOptimizerG2oRobotic(g2o.SparseOptimizer):
     # But it should be transparent from outside.
     def __init__(self):
         self.sensor_id_offset = 400000
-        self.align_radius = 0.005
+        self.align_radius = 0.007
         self.node_amount = 0
         super().__init__()
         # solver = g2o.BlockSolverSE3(g2o.LinearSolverCholmodSE3())
@@ -41,15 +41,15 @@ class PoseGraphOptimizerG2oRobotic(g2o.SparseOptimizer):
                       information=numpy.array([[100, 0, 0, 0, 0, 0],
                                                [0, 100, 0, 0, 0, 0],
                                                [0, 0, 100, 0, 0, 0],
-                                               [0, 0, 0, 1, 0, 0],
+                                               [0, 0, 0, 0, 0, 0],
                                                [0, 0, 0, 0, 1, 0],
                                                [0, 0, 0, 0, 0, 1]]),
                       robust_kernel=None)
 
     def add_neighbour_edge(self, s_id, t_id, distance=0.0):
-        weight = 60 * self.align_radius / (distance + self.align_radius / 10)
+        weight = 120 * self.align_radius / (distance + self.align_radius / 10)
         angle_weight = 0
-        print("%6d to %6d: Weight: %5f" % (s_id, t_id, weight))
+        # print("%6d to %6d: Weight: %5f" % (s_id, t_id, weight))
         self.add_edge(s_id, t_id,
                       local_trans=numpy.array([[1, 0, 0, 0],
                                                [0, 1, 0, 0],
@@ -89,46 +89,49 @@ class PoseGraphOptimizerG2oRobotic(g2o.SparseOptimizer):
     def get_pose(self, id_outside):
         return self.vertex(id_outside).estimate().matrix()
 
-    def load_trans_list(self, trans_list):
+    def load_trans_list(self, trans_list, downsample_voxel_size=0.002):
+        print("Loading in %6d trans in the list." % len(trans_list))
         points = []
-        self.node_amount = len(trans_list)
-        for i, trans in enumerate(trans_list):
-            points.append(numpy.dot(trans, numpy.array([0, 0, 0, 1]).T).T[0:3].tolist())
+        for trans in trans_list:
+            points.append(numpy.dot(trans, numpy.array([0, 0, 0, 1]).T).T[0:3])
+        original_pcd = PointCloud()
+        original_pcd.points = Vector3dVector(points)
+
+        min_cube_size = downsample_voxel_size
+        pcd_down = geometry.voxel_down_sample(input=original_pcd,
+                                              voxel_size=min_cube_size)
+        min_bound = pcd_down.get_min_bound() - min_cube_size * 0.5
+        max_bound = pcd_down.get_max_bound() + min_cube_size * 0.5
+
+        pcd_down, index_in_pcd = \
+            geometry.voxel_down_sample_and_trace(input=original_pcd,
+                                                 voxel_size=min_cube_size,
+                                                 min_bound=min_bound,
+                                                 max_bound=max_bound,
+                                                 approximate_class=False)
+        index_list = index_in_pcd.reshape(-1)
+        index_list = numpy.sort(index_list[index_list >= 0]).tolist()
+        downsampled_trans_list = adjust_order(trans_list, index_list)
+
+        print("Loaded trans have been downsampled to %6d trans." % len(downsampled_trans_list))
+
+        downsampled_points = []
+        self.node_amount = len(downsampled_trans_list)
+        for i, trans in enumerate(downsampled_trans_list):
+            downsampled_points.append(numpy.dot(trans, numpy.array([0, 0, 0, 1]).T).T[0:3].tolist())
             self.add_robotic_pose_node(i, trans)
-        pcd = PointCloud()
-        pcd.points = Vector3dVector(points)
-        kd_tree = KDTreeFlann(pcd)
+        downsampled_pcd = PointCloud()
+        downsampled_pcd.points = Vector3dVector(downsampled_points)
+        kd_tree = KDTreeFlann(downsampled_pcd)
 
-        # multi threading processing
-
-        # for i, point in enumerate(points):
-        #     neighbour_edge_dict[i] = []
-        # max_thread = min(multiprocessing.cpu_count(), max(len(points), 1))
-        # neighbour_edge_list = Parallel(n_jobs=max_thread)(
-        #     delayed(kd_tree.search_radius_vector_3d)(point, radius=self.align_radius)
-        #     for point in points)
-        #
-        # edge_list = []
-        # for s_id, neighbour_edge_sub_list in enumerate(neighbour_edge_list):
-        #     for t_id in neighbour_edge_sub_list:
-        #         edge_list.append([s_id, t_id])
-        #
-        # max_thread = min(multiprocessing.cpu_count(), max(len(edge_list), 1))
-        # distance_results = Parallel(n_jobs=max_thread)(
-        #     delayed(numpy.linalg.norm)(points[s_id] - points[t_id])
-        #     for [s_id, t_id] in edge_list)
-        #
-        # for i, [s_id, t_id] in enumerate(edge_list):
-        #     self.add_neighbour_edge(s_id, t_id, distance_results[i])
-
-
-        for i, point in enumerate(points):
+        for s_id, point in enumerate(downsampled_points):
             [_, idx, _] = kd_tree.search_radius_vector_3d(point, radius=self.align_radius)
-            for id in idx:
-                if id > i:
-                    # distance = numpy.linalg.norm(numpy.asarray(points[i]) - numpy.asarray(points[id]))
-                    distance = 1
-                    self.add_neighbour_edge(i, id, distance)
+            print("Node %6d / % 6d, has %6d neighbours under processing." % (s_id, len(downsampled_points), len(idx)))
+            for t_id in idx:
+                if t_id > s_id:
+                    distance = numpy.linalg.norm(numpy.asarray(points[s_id]) - numpy.asarray(points[t_id]))
+                    # distance = 1
+                    self.add_neighbour_edge(s_id, t_id, distance)
 
     def export_optimized_as_trans_list(self):
         trans_list = []

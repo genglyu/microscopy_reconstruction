@@ -11,7 +11,9 @@ import math
 import matplotlib.pyplot as plt
 
 sys.path.append("../Utility")
+sys.path.append("../Tools/robotic_arm")
 from file_managing import *
+from robotic_data_convert import *
 
 
 class TileInfo:
@@ -22,6 +24,7 @@ class TileInfo:
                  zoom_level,
                  position=numpy.array([0.0, 0.0, 0.0]),
                  rotation=numpy.array([0.0, 0.0, 1.0, 0.0]),
+                 init_transform_matrix=numpy.identity(4),
                  width_by_mm=5.2,
                  height_by_mm=3.9):
         self.tile_index = tile_index
@@ -47,7 +50,7 @@ class TileInfo:
         self.trans_from_april_tag = {}
 
         self.pose_matrix = numpy.identity(4)
-        self.init_transform_matrix = numpy.identity(4)
+        self.init_transform_matrix = init_transform_matrix
 
         self.odometry_list = []
         self.potential_loop_closure = []  # Use the real tile index rather than key in dict. (key should be the same)
@@ -104,7 +107,75 @@ def load_tile_info_unity(tile_info_file_path):
     return new_tile_info
 
 
-def make_tile_info_dict_all(config):
+# def load_tile_info_robotic(tile_info_file_path):
+#     if os.path.isfile(tile_info_file_path):
+#         robotic_pose_data = json.load(open(tile_info_file_path, "r"))
+#         trans_data = rob_pose_to_trans(robotic_pose_data)
+#
+#         file_name, extension = os.path.splitext(os.path.basename(tile_info_file_path))
+#         tile_index = int(file_name[len("tile_"):])
+#
+#         new_tile_info = TileInfo(
+#             tile_index=tile_index,
+#
+#         )
+
+
+# def make_tile_info_dict_all_robotic(config):
+#     tile_info_directory = join(config["path_data"], config["path_tile_info"])
+#     if os.path.isdir(tile_info_directory):
+#         tile_info_file_list = get_file_list(tile_info_directory)
+#     else:
+#         print(tile_info_directory + " is not a directory")
+#         return None
+#     # Usually there is no need to add the sorting function
+#
+#     # camera offset calibration would use these two. Might need to be adjusted in the future. ========================
+#     camera_offset_matrix = numpy.asarray(config["camera_offset"]).reshape((4, 4))
+#     camera_offset_matrix_inv = numpy.linalg.inv(camera_offset_matrix)
+#     # ================================================================================================================
+#     tile_info_dict_all = {}
+#     # tile_laplacian_list = []
+#     tile_blur = 0
+#
+#     for tile_info_file_path in tile_info_file_list:
+#         tile_info = load_tile_info_unity(tile_info_file_path)
+#         tile_info.image_path = os.path.join(config["path_data"], config["path_image_dir"], tile_info.image_path)
+#
+#         image = cv2.imread(tile_info.image_path)
+#         (h, w, c) = image.shape
+#         [tile_info.width_by_pixel, tile_info.height_by_pixel] = [w, h]
+#         [tile_info.width_by_mm, tile_info.height_by_mm] = config["size_by_mm"][tile_info.zoom_level]
+#
+#         tile_info.laplacian = cv2.Laplacian(image, cv2.CV_64F).var()
+#         # tile_laplacian_list.append(tile_info.laplacian)
+#
+#         tile_info.init_transform_matrix = tile_generate_init_transform_matrix(tile_info.position, tile_info.rotation)
+#
+#         tile_info.pose_matrix = tile_info.init_transform_matrix
+#         tile_info_dict_all[tile_info.tile_index] = tile_info
+#         # ===========================================================================================
+#         if tile_info.laplacian < config["laplacian_threshold"]:
+#             tile_blur += 1
+#             print("Blur: %05d. Total blurs: %d out of %d" % (tile_info.tile_index, tile_blur, len(tile_info_file_list)))
+#
+#     print("%d tiles out of %d in total are blurred" % (tile_blur, len(tile_info_dict_all)))
+#
+#     # plt.hist(x=tile_laplacian_list)
+#     # # plt.hist(x=tile_laplacian_list, bins=numpy.arange(-5.0, 5.5, 0.5))
+#     # plt.title('The laplacian of tile images')
+#     # plt.xlabel('laplacian')
+#     # plt.ylabel('Distribution')
+#     # # plt.grid(axis='y', alpha=0.5)
+#     # # axes = plt.gca()
+#     # # axes.set_xlim([-5, 5])
+#     # # axes.set_ylim([0, 3000000])
+#     # plt.show()
+#
+#     return tile_info_dict_all
+
+
+def make_tile_info_dict_all_unity(config):
     tile_info_directory = join(config["path_data"], config["path_tile_info"])
     if os.path.isdir(tile_info_directory):
         tile_info_file_list = get_file_list(tile_info_directory)
