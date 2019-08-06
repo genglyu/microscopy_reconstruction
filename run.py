@@ -154,7 +154,7 @@ if __name__ == "__main__":
 
     # Make pose graph ============================================================================
     if args.make_pose_graph_g2o:
-        pose_graph_g2o = pose_graph_g2o.PoseGraphOptimizerG2o()
+        pose_graph_g2o = pose_graph_g2o.PoseGraphOptimizerUnityG2o()
         try:
             pose_graph_g2o.make_pose_graph(tile_info_dict, trans_data_manager, config)
             pose_graph_g2o.save(join(config["path_data"], config["rough_g2o_pg_name"]))
@@ -171,7 +171,7 @@ if __name__ == "__main__":
             print("No rough_pose_graph available in RAM. Try reading from default path")
             rough_posegraph_path = join(config["path_data"], config["rough_g2o_pg_name"])
             if os.path.isfile(rough_posegraph_path):
-                pose_graph_g2o = pose_graph_g2o.PoseGraphOptimizerG2o()
+                pose_graph_g2o = pose_graph_g2o.PoseGraphOptimizerUnityG2o()
                 pose_graph_g2o.load(rough_posegraph_path)
                 pose_graph_g2o.optimize(config["max_iterations"])
             else:

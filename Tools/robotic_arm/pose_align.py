@@ -13,7 +13,7 @@ class PoseGraphOptimizerG2oRobotic(g2o.SparseOptimizer):
     # But it should be transparent from outside.
     def __init__(self):
         self.sensor_id_offset = 400000
-        self.align_radius = 0.007
+        self.align_radius = 0.01
         self.node_amount = 0
         super().__init__()
         # solver = g2o.BlockSolverSE3(g2o.LinearSolverCholmodSE3())
@@ -38,17 +38,17 @@ class PoseGraphOptimizerG2oRobotic(g2o.SparseOptimizer):
         self.add_vertex(id_inside=id_init_pose, trans=trans, fixed=True)
         self.add_edge(id_inside, id_init_pose,
                       local_trans=numpy.identity(4),
-                      information=numpy.array([[100, 0, 0, 0, 0, 0],
-                                               [0, 100, 0, 0, 0, 0],
-                                               [0, 0, 100, 0, 0, 0],
+                      information=numpy.array([[200, 0, 0, 0, 0, 0],
+                                               [0, 200, 0, 0, 0, 0],
+                                               [0, 0, 200, 0, 0, 0],
                                                [0, 0, 0, 0, 0, 0],
-                                               [0, 0, 0, 0, 1, 0],
-                                               [0, 0, 0, 0, 0, 1]]),
+                                               [0, 0, 0, 0, 100, 0],
+                                               [0, 0, 0, 0, 0, 100]]),
                       robust_kernel=None)
 
     def add_neighbour_edge(self, s_id, t_id, distance=0.0):
         weight = 120 * self.align_radius / (distance + self.align_radius / 10)
-        angle_weight = 0
+        angle_weight = 1
         # print("%6d to %6d: Weight: %5f" % (s_id, t_id, weight))
         self.add_edge(s_id, t_id,
                       local_trans=numpy.array([[1, 0, 0, 0],
@@ -89,7 +89,7 @@ class PoseGraphOptimizerG2oRobotic(g2o.SparseOptimizer):
     def get_pose(self, id_outside):
         return self.vertex(id_outside).estimate().matrix()
 
-    def load_trans_list(self, trans_list, downsample_voxel_size=0.002):
+    def load_trans_list(self, trans_list, downsample_voxel_size=0.001):
         print("Loading in %6d trans in the list." % len(trans_list))
         points = []
         for trans in trans_list:

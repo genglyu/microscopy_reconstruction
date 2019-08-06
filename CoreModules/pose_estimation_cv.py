@@ -137,7 +137,7 @@ class TransDataG2o:
                                   trans=numpy.asarray(readed_data[s][t]["trans"]))
 
 
-def trans_estimation(s_info: TileInfo, t_info: TileInfo, config):
+def trans_estimation(s_info: TileInfoUnity, t_info: TileInfoUnity, config):
     s_img = cv2.imread(s_info.image_path)
     t_img = cv2.imread(t_info.image_path)
 

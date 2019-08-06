@@ -16,144 +16,91 @@ from file_managing import *
 from robotic_data_convert import *
 
 
-class TileInfoUnity:
+class TileInfoRobotic:
     def __init__(self,
                  tile_index,
-                 tile_info_path,
-                 image_path,
+                 image_name,
                  zoom_level,
-                 position=numpy.array([0.0, 0.0, 0.0]),
-                 rotation=numpy.array([0.0, 0.0, 1.0, 0.0]),
-                 init_transform_matrix=numpy.identity(4),
-                 width_by_mm=5.2,
-                 height_by_mm=3.9):
+                 init_transform_matrix=numpy.identity(4)
+                 ):
         self.tile_index = tile_index
-        self.tile_info_path = tile_info_path
-        self.image_path = image_path
-
+        self.image_name = image_name
         self.zoom_level = zoom_level
-
-        self.position = position
-        self.rotation = rotation
+        self.init_transform_matrix = init_transform_matrix
 
         # will be caculate later
-
-        self.laplacian = 0.0
-        self.is_keyframe = False
+        self.position = []
+        self.rotation = []
         self.width_by_pixel = 640
         self.height_by_pixel = 480
-        self.width_by_mm = width_by_mm
-        self.height_by_mm = height_by_mm
+        self.width_by_m = 0.0064
+        self.height_by_m = 0.0048
 
+        self.laplacian = 0.0
         self.has_april_tag = False
         self.april_tags = []
         self.trans_from_april_tag = {}
 
         self.pose_matrix = numpy.identity(4)
-        self.init_transform_matrix = init_transform_matrix
 
-        self.odometry_list = []
-        self.potential_loop_closure = []  # Use the real tile index rather than key in dict. (key should be the same)
-        self.confirmed_loop_closure = []
+        self.potential_neighbour_list = []
+        self.confirmed_neighbour_list = []
 
 
-def tile_generate_init_transform_matrix(position, rotation, scale=[1, 1, 1]):  # After updating and normalize tile info.
-    translation = position
-    rotation_matrix = Rotation.from_quat(rotation).as_dcm()
-    init_transform_matrix = transforms3d.affines.compose(translation, rotation_matrix, scale)
-    # Because of using x+ as normal direction in file image_processing.py, a rotation needs to be added.
-    # plane_shifting_rotation_trans = \
-    #     transforms3d.affines.compose(T=[0, 0, 0],
-    #                                  R=Rotation.from_euler("xyz", [0, -math.pi/2, -math.pi/2]).as_dcm(),
-    #                                  Z=[1, 1, 1])
-    plane_shifting_rotation_trans = numpy.array([[0, 1, 0, 0],
-                                                 [0, 0, 1, 0],
-                                                 [1, 0, 0, 0],
-                                                 [0, 0, 0, 1]])
-    init_transform_matrix = numpy.dot(init_transform_matrix, plane_shifting_rotation_trans)
-    # =============================================================================================
-    return init_transform_matrix
+def load_tile_robotic_pose(robotic_pose_file_path):
+    if os.path.isfile(robotic_pose_file_path):
+        robotic_pose_data = json.load(open(robotic_pose_file_path, "r"))
+        trans = rob_pose_to_trans(robotic_pose_data)
 
-
-def load_tile_info_unity(tile_info_file_path):
-    # print("Try loading from " + tile_info_file_path)
-    tree = xml.etree.ElementTree.parse(tile_info_file_path)
-    tile_info_element = tree.getroot()
-    # Try to get the real index from files.
-    try:
-        tile_index = int(tile_info_element.get('index'))
-    except:
-        file_name, extension = os.path.splitext(os.path.basename(tile_info_file_path))
+        file_name, extension = os.path.splitext(os.path.basename(robotic_pose_file_path))
         tile_index = int(file_name[len("tile_"):])
 
-    new_tile_info = TileInfoUnity(
-        tile_index=tile_index,
-        tile_info_path=tile_info_file_path,
-        image_path=tile_info_element.find('imagePath').text,
-
-        zoom_level=int(tile_info_element.get('zoomLevel')),
-        position=numpy.array([
-            float(tile_info_element.find('position').get('x')),
-            float(tile_info_element.find('position').get('y')),
-            -float(tile_info_element.find('position').get('z'))]) * 1000,
-        # Orders of w x y z are different in different libs.
-        rotation=numpy.array([
-            float(tile_info_element.find('rotation').get('x')),
-            float(tile_info_element.find('rotation').get('y')),
-            -float(tile_info_element.find('rotation').get('z')),
-            -float(tile_info_element.find('rotation').get('w'))
-        ])
-    )
-    return new_tile_info
-
-
-def make_tile_info_dict_all_unity(config):
-    tile_info_directory = join(config["path_data"], config["path_tile_info"])
-    if os.path.isdir(tile_info_directory):
-        tile_info_file_list = get_file_list(tile_info_directory)
+        new_tile_info = TileInfoRobotic(
+            tile_index=tile_index,
+            image_name=file_name + ".png",
+            zoom_level=0,
+            init_transform_matrix=trans
+        )
+        return new_tile_info
     else:
-        print(tile_info_directory + " is not a directory")
+        print(robotic_pose_file_path + " is not a file")
+        return None
+
+
+def make_tile_info_dict_all_robotic(config):
+    tile_info_directory_path = join(config["path_data"], config["path_robotic_tile_info"])
+    if os.path.isdir(tile_info_directory_path):
+        robotic_pose_file_list = get_file_list(tile_info_directory_path, extension=".json")
+    else:
+        print(tile_info_directory_path + " is not a directory")
         return None
     # Usually there is no need to add the sorting function
-
-    # camera offset calibration would use these two. Might need to be adjusted in the future. ========================
-    camera_offset_matrix = numpy.asarray(config["camera_offset"]).reshape((4, 4))
-    camera_offset_matrix_inv = numpy.linalg.inv(camera_offset_matrix)
-    # ================================================================================================================
 
     tile_info_dict_all = {}
     # tile_laplacian_list = []
     tile_blur = 0
 
-    for tile_info_file_path in tile_info_file_list:
-        tile_info = load_tile_info_unity(tile_info_file_path)
-        tile_info.image_path = os.path.join(config["path_data"], config["path_image_dir"], tile_info.image_path)
+    for robotic_pose_file_path in robotic_pose_file_list:
+        tile_info = load_tile_robotic_pose(robotic_pose_file_path)
 
-        image = cv2.imread(tile_info.image_path)
+        image = cv2.imread(join(config["path_data"], config["path_images"], tile_info.image_name))
         (h, w, c) = image.shape
         [tile_info.width_by_pixel, tile_info.height_by_pixel] = [w, h]
-        [tile_info.width_by_mm, tile_info.height_by_mm] = config["size_by_mm"][tile_info.zoom_level]
-
+        [tile_info.width_by_m, tile_info.height_by_m] = config["size_by_m"][tile_info.zoom_level]
         tile_info.laplacian = cv2.Laplacian(image, cv2.CV_64F).var()
         # tile_laplacian_list.append(tile_info.laplacian)
 
-        tile_info.init_transform_matrix = tile_generate_init_transform_matrix(tile_info.position, tile_info.rotation)
-
-        # camera offset calibration. Might need to be adjusted in the future.========================
-        # current matrix is generated for normal direction == z+. Might not suit for other situation.
-
-        # tile_info.init_transform_matrix = numpy.dot(
-        #     numpy.dot(camera_offset_matrix_inv, tile_info.init_transform_matrix),
-        #     camera_offset_matrix)
-
-        # ===========================================================================================
-
         tile_info.pose_matrix = tile_info.init_transform_matrix
+
+
+
+
         tile_info_dict_all[tile_info.tile_index] = tile_info
         # ===========================================================================================
         if tile_info.laplacian < config["laplacian_threshold"]:
             tile_blur += 1
-            print("Blur: %05d. Total blurs: %d out of %d" % (tile_info.tile_index, tile_blur, len(tile_info_file_list)))
+            print("Blur: %05d. Total blurs: %d out of %d" %
+                  (tile_info.tile_index, tile_blur, len(robotic_pose_file_list)))
 
     print("%d tiles out of %d in total are blurred" % (tile_blur, len(tile_info_dict_all)))
 
@@ -169,6 +116,9 @@ def make_tile_info_dict_all_unity(config):
     # plt.show()
 
     return tile_info_dict_all
+
+
+
 
 
 def make_info_dict(tile_info_dict_all, config):
@@ -345,14 +295,14 @@ def read_tile_info_dict(tile_info_dict_file_path):
     tile_info_dict_data = json.load(open(tile_info_dict_file_path, "r"))
     tile_info_dict = {}
     for tile_info_key in tile_info_dict_data:
-        new_tile_info = TileInfoUnity(tile_index=int(tile_info_dict_data[tile_info_key]["tile_index"]),
-                                      tile_info_path=tile_info_dict_data[tile_info_key]["tile_info_path"],
-                                      image_path=tile_info_dict_data[tile_info_key]["image_path"],
-                                      zoom_level=tile_info_dict_data[tile_info_key]["zoom_level"],
-                                      position=numpy.asarray(tile_info_dict_data[tile_info_key]["position"]),
-                                      rotation=numpy.asarray(tile_info_dict_data[tile_info_key]["rotation"]),
-                                      width_by_mm=tile_info_dict_data[tile_info_key]["width_by_mm"],
-                                      height_by_mm=tile_info_dict_data[tile_info_key]["height_by_mm"])
+        new_tile_info = TileInfo(tile_index=int(tile_info_dict_data[tile_info_key]["tile_index"]),
+                                 tile_info_path=tile_info_dict_data[tile_info_key]["tile_info_path"],
+                                 image_path=tile_info_dict_data[tile_info_key]["image_path"],
+                                 zoom_level=tile_info_dict_data[tile_info_key]["zoom_level"],
+                                 position=numpy.asarray(tile_info_dict_data[tile_info_key]["position"]),
+                                 rotation=numpy.asarray(tile_info_dict_data[tile_info_key]["rotation"]),
+                                 width_by_mm=tile_info_dict_data[tile_info_key]["width_by_mm"],
+                                 height_by_mm=tile_info_dict_data[tile_info_key]["height_by_mm"])
         new_tile_info.laplacian = float(tile_info_dict_data[tile_info_key]["laplacian"])
         new_tile_info.width_by_pixel = int(tile_info_dict_data[tile_info_key]["width_by_pixel"])
         new_tile_info.height_by_pixel = int(tile_info_dict_data[tile_info_key]["height_by_pixel"])

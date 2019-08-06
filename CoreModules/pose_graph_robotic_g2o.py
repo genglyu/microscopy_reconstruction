@@ -12,7 +12,7 @@ from tile_info_processing import *
 from typing import Dict
 
 
-class PoseGraphOptimizerUnityG2o(g2o.SparseOptimizer):
+class PoseGraphOptimizerG2o(g2o.SparseOptimizer):
     # Considering there would be fixed sensor data nodes, the id in pose graph is different from the real id.
     # For a certain tile with id = n, then its node id = 2n, its sensor data node id = 2n + 1.
     # But it should be transparent from outside.

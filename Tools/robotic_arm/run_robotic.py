@@ -58,13 +58,20 @@ if __name__ == "__main__":
     if args.pose_list_make_all:
         file_managing.touch_folder(join(robotic_config["path_data"],
                                         robotic_config["robotic_reconstruction_workspace"]))
-        pose_list, trans_list = \
-            make_robotic_pose_list(join(robotic_config["path_data"],
-                                        robotic_config["robotic_reconstruction_pose_dir"]))
-        save_robotic_pose_list(join(robotic_config["path_data"],
-                                    robotic_config["robotic_reconstruction_workspace"],
-                                    robotic_config["robotic_reconstruction_pose_list_all"]),
-                               pose_list)
+        # pose_list, trans_list = \
+        #     make_robotic_pose_list(join(robotic_config["path_data"],
+        #                                 robotic_config["robotic_reconstruction_pose_dir"]))
+        # save_robotic_pose_list(join(robotic_config["path_data"],
+        #                             robotic_config["robotic_reconstruction_workspace"],
+        #                             robotic_config["robotic_reconstruction_pose_list_all"]),
+        #                        pose_list)
+
+        trans_list = read_robotic_pose_list_as_trans_list(
+            join(robotic_config["path_data"],
+                 robotic_config["robotic_reconstruction_workspace"],
+                 robotic_config["robotic_reconstruction_pose_list_all"])
+        )
+
         save_trans_list(join(robotic_config["path_data"],
                              robotic_config["robotic_reconstruction_workspace"],
                              robotic_config["robotic_reconstruction_trans_list_all"]),
@@ -95,13 +102,20 @@ if __name__ == "__main__":
 
     if args.interpolation:
         import robotic_surface_interpolation
-        trans_list_aligned = read_trans_list(join(robotic_config["path_data"],
-                                                  robotic_config["robotic_reconstruction_workspace"],
-                                                  robotic_config["robotic_reconstruction_trans_list_aligned"]))
+        try:
+            trans_list = read_trans_list(join(robotic_config["path_data"],
+                                                      robotic_config["robotic_reconstruction_workspace"],
+                                                      robotic_config["robotic_reconstruction_trans_list_aligned"]))
+        except:
+            trans_list = read_trans_list(join(robotic_config["path_data"],
+                                              robotic_config["robotic_reconstruction_workspace"],
+                                              robotic_config["robotic_reconstruction_trans_list_all"]))
+
         surface_interpolator = robotic_surface_interpolation.RoboticSurfaceConstructor()
 
-        surface_interpolator.load_trans_list(trans_list_aligned)
-        surface_interpolator.run_interpolation()
+        surface_interpolator.load_trans_list(trans_list)
+        # surface_interpolator.run_interpolation()
+        surface_interpolator.run_single_interpolation()
         surface_interpolator.save_interpolated_trans_list(
             join(robotic_config["path_data"],
                  robotic_config["robotic_reconstruction_workspace"],
@@ -109,14 +123,14 @@ if __name__ == "__main__":
 
     if args.navigation:
         import navigation
-        trans_list_interpolated = read_trans_list(join(robotic_config["path_data"],
+        trans_list = read_trans_list(join(robotic_config["path_data"],
                                                        robotic_config["robotic_reconstruction_workspace"],
                                                        robotic_config["robotic_reconstruction_trans_interpolated"]))
 
         navigator = navigation.NavigationGraph()
 
         # points = trans_list_to_points(trans_list_interpolated)
-        navigator.load_trans_list(trans_list_interpolated, 0.03)
+        navigator.load_trans_list(trans_list, 0.03)
         # order = navigator.dfs()
         # order = navigator.bfs(2)
 

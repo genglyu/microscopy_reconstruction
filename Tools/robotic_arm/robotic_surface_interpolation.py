@@ -56,25 +56,161 @@ class RoboticSurfaceConstructor:
         self.sampling_kd_tree = KDTreeFlann(self.sampling_pcd)
         # draw_geometries([self.sampling_pcd])
 
-    def interpolate_sub(self, index=0, radius=0.008, interpolate_w=0.01, interpolate_h=0.01, interpolate_amount=100):
+    # def interpolate_sub(self, index=0, radius=0.008, interpolate_w=0.01, interpolate_h=0.01, interpolate_amount=100):
+    #
+    #     [_, idx, _] = self.sampling_kd_tree.search_radius_vector_3d(self.points_list[index], radius=radius)
+    #
+    #     idx = list(idx)
+    #     print("interpolate for %d from %d in range points" % (index, len(idx)))
+    #
+    #     sub_points = numpy.c_[self.points_list[idx, :], numpy.ones(len(idx))]
+    #
+    #     transformed_sub_points = numpy.dot(numpy.linalg.inv(self.trans_list[index]), sub_points.T).T[:, 0:3]
+    #
+    #     yz = transformed_sub_points[:, 1:3]
+    #
+    #     x = transformed_sub_points[:, 0]
+    #     y = transformed_sub_points[:, 1]
+    #     z = transformed_sub_points[:, 2]
+    #
+    #     # print(yz)
+    #
+    #     grid_y, grid_z = numpy.mgrid[
+    #                      -interpolate_w/2:interpolate_w/2:(interpolate_amount * 1j),
+    #                      -interpolate_h/2:interpolate_h/2:(interpolate_amount * 1j)]
+    #     grid_x = griddata(yz, x, (grid_y, grid_z), method='cubic')
+    #     interpolate_points = numpy.c_[grid_x.reshape(-1), grid_y.reshape(-1), grid_z.reshape(-1)]
+    #     interpolate_points = interpolate_points[numpy.logical_not(numpy.isnan(interpolate_points[:, 0]))]
+    #
+    #     sub_pcd = PointCloud()
+    #     sub_pcd.points = Vector3dVector(interpolate_points)
+    #
+    #     geometry.estimate_normals(sub_pcd,
+    #                               search_param=geometry.KDTreeSearchParamHybrid(radius=interpolate_w, max_nn=30))
+    #     sub_pcd.normalize_normals()
+    #
+    #     normal_list = []
+    #     for normal in sub_pcd.normals:
+    #         if normal[0] < 0:
+    #             normal_list.append(normal * -1)
+    #         else:
+    #             normal_list.append(normal)
+    #     sub_pcd.normals = Vector3dVector(normal_list)
+    #
+    #     sub_pcd.transform(self.trans_list[index])
+    #     # draw_geometries([sub_pcd, self.sampling_pcd])
+    #     return sub_pcd
+
+
+    # def run_interpolation(self):
+    #     # Down sample the entire point cloud to pick the ones that do interpolation on ================================
+    #     draw_geometries([self.sampling_pcd])
+    #     cl, ind = open3d.geometry.statistical_outlier_removal(self.sampling_pcd,
+    #                                                           nb_neighbors=300,
+    #                                                           std_ratio=0.01)
+    #     display_inlier_outlier(self.sampling_pcd, ind)
+    #     # interpolating_point_trans_list = adjust_order(self.trans_list, ind)
+    #
+    #     for i in ind:
+    #         sub_pcd = self.interpolate_sub(index=i)
+    #         # sub_pcd.transform(pose)
+    #         self.integrated_surface_pcd = self.integrated_surface_pcd + sub_pcd
+    #
+    #     # print(self.integrated_surface_pcd.normals[100])
+    #
+    #     # ============================================================
+    #     # self.integrated_surface_pcd = geometry.voxel_down_sample(self.integrated_surface_pcd, voxel_size=0.001)
+    #     # self.integrated_surface_pcd = open3d.geometry.uniform_down_sample(input=self.integrated_surface_pcd,
+    #     #                                                                   every_k_points=100)
+    #
+    #     # draw_geometries([self.integrated_surface_pcd])
+    #
+    #     min_cube_size = 0.002
+    #     pcd_down = geometry.voxel_down_sample(input=self.integrated_surface_pcd,
+    #                                           voxel_size=min_cube_size)
+    #
+    #     draw_geometries([pcd_down])
+    #
+    #     min_bound = pcd_down.get_min_bound() - min_cube_size * 0.5
+    #     max_bound = pcd_down.get_max_bound() + min_cube_size * 0.5
+    #
+    #     pcd_down, index_in_pcd = \
+    #         geometry.voxel_down_sample_and_trace(input=self.integrated_surface_pcd,
+    #                                              voxel_size=min_cube_size,
+    #                                              min_bound=min_bound,
+    #                                              max_bound=max_bound,
+    #                                              approximate_class=False)
+    #     # self.integrated_surface_pcd = pcd_down
+    #     # print(index_in_pcd)
+    #     index_list = index_in_pcd.reshape(-1)
+    #     index_list = numpy.sort(index_list[index_list >= 0]).tolist()
+    #
+    #     points = []
+    #     normals = []
+    #     # colors = []
+    #     for index in index_list:
+    #         points.append(self.integrated_surface_pcd.points[index])
+    #         normals.append(self.integrated_surface_pcd.normals[index])
+    #         # colors.append(self.integrated_surface_pcd.colors[index])
+    #     self.integrated_surface_pcd = PointCloud()
+    #     self.integrated_surface_pcd.points = Vector3dVector(points)
+    #     # self.integrated_surface_pcd = self.integrated_surface_pcd + self.sampling_pcd
+    #
+    #     self.integrated_surface_pcd.normals = Vector3dVector(normals)
+    #     # self.integrated_surface_pcd.colors = Vector3dVector(colors)
+    #
+    #     # geometry.estimate_normals(self.integrated_surface_pcd,
+    #     #                           search_param=geometry.KDTreeSearchParamHybrid(radius=0.01, max_nn=30))
+    #
+    #     # cl, ind = open3d.geometry.radius_outlier_removal(self.integrated_surface_pcd,
+    #     #                                                  nb_points=5,
+    #     #                                                  radius=0.006)
+    #     cl, ind = open3d.geometry.statistical_outlier_removal(self.integrated_surface_pcd,
+    #                                                           nb_neighbors=10,
+    #                                                           std_ratio=1.0)
+    #     display_inlier_outlier(self.integrated_surface_pcd, ind)
+    #
+    #     # draw_geometries([self.integrated_surface_pcd])
+    #     # ============================================================
+    #     # connection = visualization.make_connection_of_pcd_order(self.integrated_surface_pcd)
+    #     # draw_geometries([self.integrated_surface_pcd, connection])
+    #     # ============================================================
+    #
+    #     for i, position in enumerate(self.integrated_surface_pcd.points):
+    #         rotation_m = rotation_matrix(self.integrated_surface_pcd.normals[i])
+    #
+    #         trans = transforms3d.affines.compose(T=position, R=rotation_m, Z=[1, 1, 1])
+    #         self.interpolated_trans_list.append(trans.tolist())
+    #         self.interpolate_robotic_pose.append(trans_to_rob_pose(trans))
+
+
+    def interpolate_sub(self, index=0, radius=0.01, interpolate_w=0.005, interpolate_h=0.005, interpolate_amount=100):
 
         [_, idx, _] = self.sampling_kd_tree.search_radius_vector_3d(self.points_list[index], radius=radius)
 
         idx = list(idx)
         print("interpolate for %d from %d in range points" % (index, len(idx)))
+        interpolate_center_trans = self.trans_list[index]
+        inv_center_trans = numpy.linalg.inv(interpolate_center_trans)
+        sub_trans_list = adjust_order(self.trans_list, idx)
 
-        sub_points = numpy.c_[self.points_list[idx, :], numpy.ones(len(idx))]
-
-        transformed_sub_points = numpy.dot(numpy.linalg.inv(self.trans_list[index]), sub_points.T).T[:, 0:3]
+        transformed_sub_points = []
+        for trans in sub_trans_list:
+            converted_trans = numpy.dot(inv_center_trans, trans)
+            normal = numpy.dot(converted_trans, numpy.array([1, 0, 0, 0]).T).T[0:3]
+            if normal[0] > 0:
+                point_transformed = numpy.dot(converted_trans, numpy.array([0, 0, 0, 1]).T).T[0:3]
+                transformed_sub_points.append(point_transformed)
+        transformed_sub_points = numpy.asarray(transformed_sub_points)
+        # sub_points = numpy.c_[self.points_list[idx, :], numpy.ones(len(idx))]
+        # transformed_sub_points = numpy.dot(numpy.linalg.inv(self.trans_list[index]), sub_points.T).T[:, 0:3]
 
         yz = transformed_sub_points[:, 1:3]
 
         x = transformed_sub_points[:, 0]
-        y = transformed_sub_points[:, 1]
-        z = transformed_sub_points[:, 2]
-
+        # y = transformed_sub_points[:, 1]
+        # z = transformed_sub_points[:, 2]
         # print(yz)
-
         grid_y, grid_z = numpy.mgrid[
                          -interpolate_w/2:interpolate_w/2:(interpolate_amount * 1j),
                          -interpolate_h/2:interpolate_h/2:(interpolate_amount * 1j)]
@@ -101,16 +237,93 @@ class RoboticSurfaceConstructor:
         # draw_geometries([sub_pcd, self.sampling_pcd])
         return sub_pcd
 
+    def run_single_interpolation(self):
+        draw_geometries([self.sampling_pcd])
+        min_bound = self.sampling_pcd.get_min_bound()
+        max_bound = self.sampling_pcd.get_max_bound()
+        center = (min_bound + max_bound) / 2
+        width = numpy.linalg.norm(max_bound-min_bound)
+
+        [k, idx, _] = self.sampling_kd_tree.search_knn_vector_3d(center, 1)
+        self.integrated_surface_pcd = self.interpolate_sub(index=idx[0], radius=width/2,
+                                                           interpolate_w=width, interpolate_h=width,
+                                                           interpolate_amount=100)
+
+        draw_geometries([self.integrated_surface_pcd])
+
+        min_cube_size = 0.003
+        pcd_down = geometry.voxel_down_sample(input=self.integrated_surface_pcd,
+                                              voxel_size=min_cube_size)
+
+        draw_geometries([pcd_down])
+
+        min_bound = pcd_down.get_min_bound() - min_cube_size * 0.5
+        max_bound = pcd_down.get_max_bound() + min_cube_size * 0.5
+
+        print("min_bound")
+        print(min_bound)
+        print(max_bound)
+
+        pcd_down, index_in_pcd = \
+            geometry.voxel_down_sample_and_trace(input=self.integrated_surface_pcd,
+                                                 voxel_size=min_cube_size,
+                                                 min_bound=min_bound,
+                                                 max_bound=max_bound,
+                                                 approximate_class=False)
+        # self.integrated_surface_pcd = pcd_down
+        # print(index_in_pcd)
+        index_list = index_in_pcd.reshape(-1)
+        index_list = numpy.sort(index_list[index_list >= 0]).tolist()
+
+        points = []
+        normals = []
+        # colors = []
+        for index in index_list:
+            points.append(self.integrated_surface_pcd.points[index])
+            normals.append(self.integrated_surface_pcd.normals[index])
+            # colors.append(self.integrated_surface_pcd.colors[index])
+        self.integrated_surface_pcd = PointCloud()
+        self.integrated_surface_pcd.points = Vector3dVector(points)
+        # self.integrated_surface_pcd = self.integrated_surface_pcd + self.sampling_pcd
+
+        self.integrated_surface_pcd.normals = Vector3dVector(normals)
+        # self.integrated_surface_pcd.colors = Vector3dVector(colors)
+
+        # geometry.estimate_normals(self.integrated_surface_pcd,
+        #                           search_param=geometry.KDTreeSearchParamHybrid(radius=0.01, max_nn=30))
+
+        # cl, ind = open3d.geometry.radius_outlier_removal(self.integrated_surface_pcd,
+        #                                                  nb_points=5,
+        #                                                  radius=0.006)
+        cl, ind = open3d.geometry.statistical_outlier_removal(self.integrated_surface_pcd,
+                                                              nb_neighbors=10,
+                                                              std_ratio=1.0)
+        display_inlier_outlier(self.integrated_surface_pcd, ind)
+
+        # draw_geometries([self.integrated_surface_pcd])
+        # ============================================================
+        # connection = visualization.make_connection_of_pcd_order(self.integrated_surface_pcd)
+        # draw_geometries([self.integrated_surface_pcd, connection])
+        # ============================================================
+
+        for i, position in enumerate(self.integrated_surface_pcd.points):
+            rotation_m = rotation_matrix(self.integrated_surface_pcd.normals[i])
+
+            trans = transforms3d.affines.compose(T=position, R=rotation_m, Z=[1, 1, 1])
+            self.interpolated_trans_list.append(trans.tolist())
+            self.interpolate_robotic_pose.append(trans_to_rob_pose(trans))
+
+
+
     def run_interpolation(self):
         # Down sample the entire point cloud to pick the ones that do interpolation on ================================
         draw_geometries([self.sampling_pcd])
-        cl, ind = open3d.geometry.statistical_outlier_removal(self.sampling_pcd,
-                                                              nb_neighbors=300,
-                                                              std_ratio=0.01)
-        display_inlier_outlier(self.sampling_pcd, ind)
-        # interpolating_point_trans_list = adjust_order(self.trans_list, ind)
 
-        for i in ind:
+        cl, ind = open3d.geometry.statistical_outlier_removal(self.integrated_surface_pcd,
+                                                              nb_neighbors=100,
+                                                              std_ratio=1.0)
+
+        for i, trans in enumerate(self.trans_list):
             sub_pcd = self.interpolate_sub(index=i)
             # sub_pcd.transform(pose)
             self.integrated_surface_pcd = self.integrated_surface_pcd + sub_pcd
@@ -124,7 +337,7 @@ class RoboticSurfaceConstructor:
 
         # draw_geometries([self.integrated_surface_pcd])
 
-        min_cube_size = 0.002
+        min_cube_size = 0.003
         pcd_down = geometry.voxel_down_sample(input=self.integrated_surface_pcd,
                                               voxel_size=min_cube_size)
 
@@ -132,6 +345,11 @@ class RoboticSurfaceConstructor:
 
         min_bound = pcd_down.get_min_bound() - min_cube_size * 0.5
         max_bound = pcd_down.get_max_bound() + min_cube_size * 0.5
+        max_bound = pcd_down.get_max_bound() - min_cube_size * 5
+
+        print("min_bound")
+        print(min_bound)
+        print(max_bound)
 
         pcd_down, index_in_pcd = \
             geometry.voxel_down_sample_and_trace(input=self.integrated_surface_pcd,
