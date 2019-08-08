@@ -42,6 +42,11 @@ def read_robotic_pose_list(path, exclude_beginning_n=0):
     return robotic_pose_list
 
 
+def read_points_list(path):
+    points_list = json.load(open(path, "r"))
+    return points_list
+
+
 def read_trans_list(path, exclude_beginning_n=0):
     trans_data_list = json.load(open(path, "r"))
     trans_list = []

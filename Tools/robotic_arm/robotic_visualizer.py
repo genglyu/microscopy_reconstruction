@@ -144,7 +144,7 @@ class RoboticVisualizerOpen3d:
                          self.robotic_config["robotic_reconstruction_workspace"],
                          self.robotic_config["robotic_reconstruction_trans_interpolated"])
                 )
-                self.interpolated_pcd = make_pcd_from_trans_list(interpolated_trans_list)
+                self.interpolated_pcd = make_pcd_from_trans_list(interpolated_trans_list, color=[0, 1, 0])
             draw_list.append(self.interpolated_pcd)
         if interpolated_wire_frame:
             if self.interpolated_wire_frame is None:
